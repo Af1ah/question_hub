@@ -1,65 +1,171 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { SearchBar } from '@/components/ui/SearchBar';
+import { FilterModal } from '@/components/ui/FilterModal';
+import { PaperCard } from '@/components/ui/PaperCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Paper, PaperFilters, Department, SubjectType } from '@/types';
+import { ROUTES, SITE_NAME } from '@/constants';
+import styles from './page.module.css';
+
+export default function HomePage() {
+  const [papers, setPapers] = useState<Paper[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<PaperFilters>({});
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch papers
+        const papersRes = await fetch('/api/papers?limit=6');
+        if (papersRes.ok) {
+          const papersData = await papersRes.json();
+          setPapers(papersData.items || []);
+        }
+
+        // Fetch departments
+        const deptsRes = await fetch('/api/departments');
+        if (deptsRes.ok) {
+          const deptsData = await deptsRes.json();
+          setDepartments(deptsData || []);
+        }
+
+        // Fetch subject types
+        const typesRes = await fetch('/api/subject-types');
+        if (typesRes.ok) {
+          const typesData = await typesRes.json();
+          setSubjectTypes(typesData || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSearch = (query: string) => {
+    setFilters((prev) => ({ ...prev, search: query }));
+    // Navigate to papers page with search
+    if (query) {
+      window.location.href = `${ROUTES.PAPERS}?search=${encodeURIComponent(query)}`;
+    }
+  };
+
+  const handleApplyFilters = (newFilters: PaperFilters) => {
+    const params = new URLSearchParams();
+
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        params.set(key, String(value));
+      }
+    });
+
+    window.location.href = `${ROUTES.PAPERS}?${params.toString()}`;
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className={styles.page}>
+      {/* Hero Section */}
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <h1 className={styles.heroTitle}>
+            Welcome to <span className={styles.highlight}>{SITE_NAME}</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className={styles.heroSubtitle}>
+            Your comprehensive question paper bank for all academic needs.
+            Browse and download previous year papers instantly.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+          {/* Search */}
+          <div className={styles.searchWrapper}>
+            <SearchBar
+              placeholder="Search by subject name or code..."
+              onSearch={handleSearch}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className={styles.filterButton}
+              aria-label="Open filters"
+            >
+              <SlidersHorizontal size={20} />
+            </button>
+          </div>
+
+          {/* Quick Stats */}
+          <div className={styles.stats}>
+            <div className={styles.statItem}>
+              <span className={styles.statNumber}>{papers.length}+</span>
+              <span className={styles.statLabel}>Papers</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.statItem}>
+              <span className={styles.statNumber}>{departments.length}</span>
+              <span className={styles.statLabel}>Departments</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.statItem}>
+              <span className={styles.statNumber}>8</span>
+              <span className={styles.statLabel}>Semesters</span>
+            </div>
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Recent Papers Section */}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 className={styles.sectionTitle}>Recent Papers</h2>
+              <p className={styles.sectionSubtitle}>
+                {papers.length} papers found
+              </p>
+            </div>
+            <Link href={ROUTES.PAPERS} className={styles.viewAllLink}>
+              View All Papers
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className={styles.loadingWrapper}>
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : papers.length > 0 ? (
+            <div className={styles.papersGrid}>
+              {papers.map((paper) => (
+                <PaperCard key={paper.id} paper={paper} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="No Papers Found"
+              description="No question papers have been uploaded yet."
+            />
+          )}
+        </div>
+      </section>
+
+      {/* Filter Modal */}
+      <FilterModal
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onApply={handleApplyFilters}
+        departments={departments}
+        subjectTypes={subjectTypes}
+      />
     </div>
   );
 }

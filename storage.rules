@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// ============================================================
+// Firebase Storage Security Rules for Question Hub
+// ============================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ========================================================
+    // Helper Functions
+    // ========================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // ========================================================
+    // Papers Folder - Public Read, Auth Write
+    // ========================================================
+    match /papers/{fileName} {
+      // Anyone can read/download papers
+      allow read: if true;
+      
+      // Only authenticated users can upload
+      allow write: if isAuthenticated();
+    }
+    
+    // ========================================================
+    // Default Deny
+    // ========================================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

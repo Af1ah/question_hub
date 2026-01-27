@@ -1,0 +1,122 @@
+rules_version = '2';
+
+// ============================================================
+// Firestore Security Rules for Question Hub
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================================
+    // Helper Functions
+    // ========================================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if request is from authenticated admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Check if request is from authenticated teacher
+    function isTeacher() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+    
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ========================================================
+    // Papers Collection - Public Read, Auth Write
+    // ========================================================
+    match /papers/{paperId} {
+      // Anyone can read published papers
+      allow read: if resource.data.isPublished == true;
+      
+      // Authenticated users can read all papers
+      allow read: if isAuthenticated();
+      
+      // Teachers can create papers
+      allow create: if isTeacher() || isAdmin();
+      
+      // Teachers can update their own papers, admins can update any
+      allow update: if isAdmin() || 
+                       (isTeacher() && resource.data.uploadedBy == request.auth.uid);
+      
+      // Only admins can delete papers
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================================
+    // Departments Collection - Public Read, Admin Write
+    // ========================================================
+    match /departments/{departmentId} {
+      // Anyone can read departments
+      allow read: if true;
+      
+      // Only admins and teachers can create/update
+      allow create, update: if isAdmin() || isTeacher();
+      
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================================
+    // Subject Types Collection - Public Read, Admin Write
+    // ========================================================
+    match /subjectTypes/{typeId} {
+      // Anyone can read subject types
+      allow read: if true;
+      
+      // Only admins can write
+      allow write: if isAdmin();
+    }
+    
+    // ========================================================
+    // Subjects Collection - Public Read, Auth Write
+    // ========================================================
+    match /subjects/{subjectId} {
+      // Anyone can read subjects
+      allow read: if true;
+      
+      // Teachers and admins can create/update
+      allow create, update: if isAdmin() || isTeacher();
+      
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================================
+    // Teachers Collection - Admin Only
+    // ========================================================
+    match /teachers/{teacherId} {
+      // Teachers can read their own profile
+      allow read: if isAdmin() || isOwner(teacherId);
+      
+      // Only admins can create/update/delete teachers
+      allow write: if isAdmin();
+    }
+    
+    // ========================================================
+    // Admins Collection - Admin Only
+    // ========================================================
+    match /admins/{adminId} {
+      // Only admins can read/write admin profiles
+      allow read, write: if isAdmin();
+    }
+    
+    // ========================================================
+    // Default Deny - Catch all other paths
+    // ========================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

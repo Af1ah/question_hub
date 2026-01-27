@@ -1,0 +1,307 @@
+.page {
+    padding: var(--space-8);
+    max-width: 800px;
+}
+
+.header {
+    margin-bottom: var(--space-6);
+}
+
+.title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.subtitle {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Form */
+.form {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+}
+
+@media (max-width: 640px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+}
+
+.required {
+    color: var(--color-error);
+}
+
+.input,
+.select,
+.textarea {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-primary);
+    transition: border-color var(--transition-fast);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.hint {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    margin: 0;
+}
+
+.selectWithAdd {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.selectWithAdd .select {
+    flex: 1;
+}
+
+.addButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3);
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.addButton:hover {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--text-inverse);
+}
+
+/* Messages */
+.error,
+.success {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-4);
+}
+
+.error {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--color-error);
+    color: var(--color-error);
+}
+
+.success {
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--color-success);
+    color: var(--color-success);
+}
+
+/* File Upload */
+.fileUpload {
+    position: relative;
+}
+
+.fileInput {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+.fileLabel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-8);
+    border: 2px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.fileLabel:hover {
+    border-color: var(--color-accent);
+    background-color: rgba(15, 52, 96, 0.05);
+}
+
+.fileInfo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fileName {
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+}
+
+.fileSize {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+}
+
+.filePlaceholder {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fileHint {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+}
+
+.removeFile {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2);
+    background-color: var(--color-error);
+    border: none;
+    border-radius: var(--radius-full);
+    color: var(--text-inverse);
+    cursor: pointer;
+}
+
+/* Submit */
+.submitButton {
+    width: 100%;
+    padding: var(--space-4);
+    margin-top: var(--space-4);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.submitButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.submitButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    padding: var(--space-4);
+}
+
+.modalContent {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    max-width: 400px;
+    width: 100%;
+}
+
+.modalContent h3 {
+    margin: 0 0 var(--space-4) 0;
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+}
+
+.modalFields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.modalActions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: flex-end;
+}
+
+.cancelButton,
+.confirmButton {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.cancelButton {
+    background-color: transparent;
+    border: 1px solid var(--border-medium);
+    color: var(--text-secondary);
+}
+
+.cancelButton:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.confirmButton {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    border: none;
+    color: var(--text-inverse);
+}
+
+.confirmButton:hover {
+    box-shadow: var(--shadow-md);
+}
