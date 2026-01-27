@@ -11,7 +11,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Paper, PaperFilters, Department, SubjectType } from '@/types';
 import styles from './page.module.css';
 
-export default function PapersPage() {
+function PapersContent() {
     const searchParams = useSearchParams();
 
     const [papers, setPapers] = useState<Paper[]>([]);
@@ -148,5 +148,28 @@ export default function PapersPage() {
                 subjectTypes={subjectTypes}
             />
         </div>
+    );
+}
+
+// Loading fallback for Suspense
+function PapersLoading() {
+    return (
+        <div className={styles.page}>
+            <div className={styles.container}>
+                <div className={styles.loadingWrapper}>
+                    <LoadingSpinner size="lg" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+import { Suspense } from 'react';
+
+export default function PapersPage() {
+    return (
+        <Suspense fallback={<PapersLoading />}>
+            <PapersContent />
+        </Suspense>
     );
 }
