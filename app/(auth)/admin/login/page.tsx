@@ -26,13 +26,17 @@ export default function AdminLoginPage() {
 
         try {
             const result = await login(email, password, 'admin');
+            console.log('Login Result:', result);
 
             if (result.success) {
+                console.log('Login successful, redirecting...');
                 router.push(ROUTES.ADMIN_DASHBOARD);
             } else {
+                console.log('Login failed with error:', result.error);
                 setError(result.error || 'Invalid credentials');
             }
         } catch (err) {
+            console.error('Login exception:', err);
             setError('An unexpected error occurred');
         } finally {
             setLoading(false);

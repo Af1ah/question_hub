@@ -3,14 +3,21 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import JSZip from 'jszip';
 import Papa from 'papaparse';
-import { addDocument, getDocuments, where, Timestamp } from '@/lib/firebase/firestore';
-import { uploadPaperFile } from '@/lib/firebase/storage';
+import { 
+  adminAddDocument, 
+  adminGetDocuments, 
+  getAdminStorage, 
+  getAdminDb,
+  FieldValue,
+  Timestamp 
+} from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/constants';
 import { generatePaperFileName, generatePaperSlug } from '@/lib/utils';
 
 /**
  * POST /api/papers/bulk-upload
  * Process bulk upload ZIP (admin only)
+ * Uses Admin SDK to bypass security rules
  */
 export async function POST(request: NextRequest) {
   try {
@@ -39,12 +46,10 @@ export async function POST(request: NextRequest) {
 
     // Find CSV file
     let csvContent = '';
-    let csvFileName = '';
     
     for (const [path, zipEntry] of Object.entries(zip.files)) {
       if (path.toLowerCase().endsWith('.csv') && !zipEntry.dir) {
         csvContent = await zipEntry.async('text');
-        csvFileName = path;
         break;
       }
     }
@@ -89,9 +94,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get or create subject types
-    const subjectTypes = await getDocuments(COLLECTIONS.SUBJECT_TYPES) as Array<{ id: string; name: string }>;
+    // Get or create subject types using Admin SDK
+    const subjectTypes = await adminGetDocuments<{ id: string; name: string }>(COLLECTIONS.SUBJECT_TYPES);
     const subjectTypeMap = new Map(subjectTypes.map((st) => [st.name, st.id]));
+
+    // Check existing papers to avoid duplicates using Admin SDK
+    // Note: adminGetDocuments doesn't support complex queries efficiently without helpers
+    // So we fetch all papers first? No, that's too heavy.
+    // We can use direct Firestore query via getAdminDb
+    const adminDb = getAdminDb();
 
     // Process CSV rows
     const results = {
@@ -133,12 +144,11 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check for duplicate
-        const existing = await getDocuments(COLLECTIONS.PAPERS, [
-          where('qnNumber', '==', qpCode),
-        ]);
-
-        if (existing.length > 0) {
+        // Check for duplicate QP code
+        const papersRef = adminDb.collection(COLLECTIONS.PAPERS);
+        const duplicateSnapshot = await papersRef.where('qnNumber', '==', qpCode).limit(1).get();
+        
+        if (!duplicateSnapshot.empty) {
           results.errors.push(`Duplicate QP Code: ${qpCode}`);
           results.failed++;
           continue;
@@ -159,23 +169,38 @@ export async function POST(request: NextRequest) {
         let subjectTypeId = subjectTypeMap.get(normalizedType);
 
         if (!subjectTypeId) {
-          subjectTypeId = await addDocument(COLLECTIONS.SUBJECT_TYPES, { name: normalizedType });
+          // Create new subject type
+          subjectTypeId = await adminAddDocument(COLLECTIONS.SUBJECT_TYPES, { name: normalizedType });
           subjectTypeMap.set(normalizedType, subjectTypeId);
         }
 
-        // Upload PDF
-        const pdfBlob = await pdfFile.async('blob');
+        // Upload PDF using Admin SDK Storage
+        const pdfBuffer = await pdfFile.async('nodebuffer');
         const fileName = generatePaperFileName(subjectCode, currentYear, qpCode);
-        const pdfFileObj = new File([pdfBlob], `${fileName}.pdf`, { type: 'application/pdf' });
-        const uploadResult = await uploadPaperFile(pdfFileObj, fileName);
+        const fullFileName = `${fileName}.pdf`;
+        
+        const bucket = getAdminStorage().bucket();
+        const fileRef = bucket.file(`papers/${fullFileName}`);
+        
+        await fileRef.save(pdfBuffer, {
+          metadata: {
+            contentType: 'application/pdf',
+          },
+        });
+        
+        // Make file public to get a URL
+        await fileRef.makePublic();
+        const fileUrl = `https://storage.googleapis.com/${bucket.name}/papers/${fullFileName}`;
+        const [metadata] = await fileRef.getMetadata();
+        const fileSize = parseInt(metadata.size || '0');
 
         // Create paper document
-        await addDocument(COLLECTIONS.PAPERS, {
+        await adminAddDocument(COLLECTIONS.PAPERS, {
           qnNumber: qpCode,
-          fileName: `${fileName}.pdf`,
+          fileName: fullFileName,
           subjectCode: subjectCode.toUpperCase(),
           subjectName,
-          subjectId: '',
+          subjectId: '', // Subject linking logic intentionally skipped for simplicity in bulk upload as per original code
           departmentId: '',
           subjectTypeId,
           programType: 'FYUGP',
@@ -183,11 +208,11 @@ export async function POST(request: NextRequest) {
           yearOfExam: currentYear,
           examDate: currentDate,
           description: '',
-          fileUrl: uploadResult.url,
-          fileSize: uploadResult.size,
+          fileUrl,
+          fileSize,
           uploadedBy: session.user.id,
-          uploadedAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
+          uploadedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
           downloadCount: 0,
           isPublished: true,
           seoSlug: generatePaperSlug(subjectName, currentYear, qpCode),

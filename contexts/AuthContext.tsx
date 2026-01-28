@@ -3,6 +3,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { AuthUser, UserRole } from '@/types';
+import { auth } from '@/lib/firebase/config';
 
 // ============================================================
 // Auth Context Types
@@ -34,6 +35,37 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
     const { data: session, status } = useSession();
+
+    // Sign in to Firebase Auth when session has a token
+    React.useEffect(() => {
+        const syncFirebase = async () => {
+            // @ts-ignore - session type extension might not be picked up immediately
+            const token = session?.firebaseToken;
+            console.log('[AuthContext] Sync Triggered. Token present:', !!token);
+
+            if (token && auth) {
+                try {
+                    // Only sign in if different user or not signed in
+                    const currentUser = auth.currentUser;
+                    console.log('[AuthContext] Current Firebase User:', currentUser?.uid, 'Session User:', session?.user.id);
+
+                    if (!currentUser || currentUser.uid !== session?.user.id) {
+                        console.log('[AuthContext] Signing in with custom token...');
+                        const { signInWithCustomToken } = await import('firebase/auth');
+                        await signInWithCustomToken(auth, token);
+                        console.log('[AuthContext] Firebase Sign In Successful');
+                    } else {
+                        console.log('[AuthContext] Already signed in as correct user.');
+                    }
+                } catch (err) {
+                    console.error('[AuthContext] Firebase Auth Sync Error:', err);
+                }
+            } else {
+                console.log('[AuthContext] No token or auth instance available.');
+            }
+        };
+        syncFirebase();
+    }, [session]);
 
     const isLoading = status === 'loading';
     const isAuthenticated = !!session?.user;

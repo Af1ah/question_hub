@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
         if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
 
         try {
-            const res = await fetch(`/api/users?id=${userId}`, { method: 'DELETE' });
+            const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
             if (res.ok) {
                 setUsers(users.filter(u => u.id !== userId));
             } else {
@@ -102,10 +102,10 @@ export default function AdminUsersPage() {
         if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
 
         try {
-            const res = await fetch('/api/users', {
+            const res = await fetch(`/api/users/${userId}/role`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, role: newRole }),
+                body: JSON.stringify({ newRole }),
             });
 
             if (res.ok) {

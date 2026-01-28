@@ -17,15 +17,17 @@ service cloud.firestore {
     }
     
     // Check if request is from authenticated admin
+    // Checks the admins collection instead of generic users collection
     function isAdmin() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
     // Check if request is from authenticated teacher
+    // Checks the teachers collection instead of generic users collection
     function isTeacher() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+             exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
     
     // Check if user owns the document
@@ -43,7 +45,7 @@ service cloud.firestore {
       // Authenticated users can read all papers
       allow read: if isAuthenticated();
       
-      // Teachers can create papers
+      // Teachers and Admins can create papers
       allow create: if isTeacher() || isAdmin();
       
       // Teachers can update their own papers, admins can update any

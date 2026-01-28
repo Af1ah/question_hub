@@ -18,12 +18,20 @@ service firebase.storage {
     // ========================================================
     // Papers Folder - Public Read, Auth Write
     // ========================================================
-    match /papers/{fileName} {
+    // Allow recursive paths for papers (e.g. papers/subdir/file.pdf)
+    match /papers/{allPaths=**} {
       // Anyone can read/download papers
       allow read: if true;
       
       // Only authenticated users can upload
       allow write: if isAuthenticated();
+    }
+
+    // ========================================================
+    // Temp Folder - Authenticated Write (for bulk upload staging)
+    // ========================================================
+    match /temp/{allPaths=**} {
+      allow read, write: if isAuthenticated();
     }
     
     // ========================================================

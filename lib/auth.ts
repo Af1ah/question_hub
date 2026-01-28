@@ -5,6 +5,7 @@ import { COLLECTIONS } from '@/constants';
 import { User as AppUser, UserRole } from '@/types';
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 // ============================================================
 // Extended Types for NextAuth
@@ -26,6 +27,7 @@ declare module 'next-auth' {
       role: UserRole;
     };
     accessToken?: string;
+    firebaseToken?: string;
   }
 }
 
@@ -36,6 +38,7 @@ declare module 'next-auth/jwt' {
     name: string;
     role: UserRole;
     accessToken?: string;
+    firebaseToken?: string;
   }
 }
 
@@ -44,9 +47,10 @@ declare module 'next-auth/jwt' {
 // ============================================================
 
 let adminDb: Firestore | null = null;
+let adminApp: App | null = null;
 
-function getAdminDb(): Firestore {
-  if (adminDb) return adminDb;
+function getAdminApp(): App {
+  if (adminApp) return adminApp;
 
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
@@ -58,14 +62,22 @@ function getAdminDb(): Firestore {
 
   if (getApps().length === 0) {
     if (clientEmail && privateKey) {
-      initializeApp({
+      adminApp = initializeApp({
         credential: cert({ projectId, clientEmail, privateKey }),
       });
     } else {
-      initializeApp({ projectId });
+      adminApp = initializeApp({ projectId });
     }
+  } else {
+      adminApp = getApps()[0];
   }
 
+  return adminApp;
+}
+
+function getAdminDb(): Firestore {
+  if (adminDb) return adminDb;
+  getAdminApp(); // Ensure app is initialized
   adminDb = getFirestore();
   return adminDb;
 }
@@ -76,6 +88,7 @@ function getAdminDb(): Firestore {
 
 async function findUserByEmail(email: string): Promise<AppUser | null> {
   try {
+    console.log(`[Auth] Finding user ${email}...`);
     const db = getAdminDb();
     // Query the unified USERS collection
     const snapshot = await db.collection(COLLECTIONS.USERS)
@@ -83,13 +96,18 @@ async function findUserByEmail(email: string): Promise<AppUser | null> {
       .limit(1)
       .get();
     
-    if (snapshot.empty) return null;
+    if (snapshot.empty) {
+        console.log(`[Auth] No user found for ${email}`);
+        return null;
+    }
     
     const doc = snapshot.docs[0];
     const data = doc.data();
+    console.log('[Auth] User found:', doc.id, data.role);
     return { id: doc.id, ...data } as unknown as AppUser;
   } catch (error) {
-    console.error('Error finding user:', error);
+    console.error('[Auth] Error finding user:', error);
+    if (error instanceof Error) console.error(error.stack);
     return null;
   }
 }
@@ -160,24 +178,33 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials): Promise<User | null> {
+        console.log('Attempting Admin Login:', credentials?.email);
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required');
         }
 
         const user = await findUserByEmail(credentials.email);
         
+        if (!user) {
+             console.log('Admin Login Failed: User not found');
+             throw new Error('Invalid credentials');
+        }
+        
         // Check if user exists, has a password hash, and is an ADMIN
-        if (!user || !user.passwordHash || user.role !== 'admin') {
+        if (!user.passwordHash || user.role !== 'admin') {
+          console.log('Admin Login Failed: Role/Hash mismatch', { role: user.role, hasHash: !!user.passwordHash });
           throw new Error('Invalid credentials');
         }
 
         const isValidPassword = await compare(credentials.password, user.passwordHash);
 
         if (!isValidPassword) {
+          console.log('Admin Login Failed: Password mismatch');
           throw new Error('Invalid credentials');
         }
 
         if (user.isLocked) {
+             console.log('Admin Login Failed: Locked');
              throw new Error('Account is locked');
         }
 
@@ -238,6 +265,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       // Initial sign in
       if (user) {
+        console.log('[Auth] JWT Callback: Initial Sign In', user.id);
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -245,13 +273,28 @@ export const authOptions: NextAuthOptions = {
 
         // Generate access token for API calls
         token.accessToken = generateAccessToken();
+        
+        // Mint Firebase Custom Token
+        try {
+            console.log('[Auth] Minting Firebase Custom Token for:', user.id);
+            // Ensure admin app is initialized
+            getAdminApp();
+            const additionalClaims = {
+                role: user.role
+            };
+            const customToken = await getAuth().createCustomToken(user.id, additionalClaims);
+            token.firebaseToken = customToken;
+            console.log('[Auth] Custom Token Data (Masked):', customToken.substring(0, 10) + '...');
+        } catch (error) {
+            console.error('[Auth] Error minting custom token:', error);
+        }
       }
 
       // Token refresh - update session if triggered
       if (trigger === 'update' && session) {
         token.name = session.name ?? token.name;
       }
-
+      
       return token;
     },
 
@@ -265,6 +308,9 @@ export const authOptions: NextAuthOptions = {
           role: token.role,
         };
         session.accessToken = token.accessToken;
+        // Important: Assign firebaseToken to session
+        session.firebaseToken = token.firebaseToken;
+        // console.log('[Auth] Session Callback: Firebase Token Present:', !!token.firebaseToken);
       }
 
       return session;

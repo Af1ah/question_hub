@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { adminGetDocuments } from '@/lib/firebase/admin';
 import { COLLECTIONS, DEFAULT_PAGE_SIZE } from '@/constants';
 import { Paper, PaperFilters } from '@/types';
@@ -29,11 +31,21 @@ export async function GET(request: NextRequest) {
         : DEFAULT_PAGE_SIZE,
     };
 
+    // Check authentication for admin privileges
+    const session = await getServerSession(authOptions); // We need to import getServerSession and authOptions
+    const isAdmin = session?.user?.role === 'admin';
+
     // Build query using Admin SDK
     let papers = await adminGetDocuments<Paper>(
       COLLECTIONS.PAPERS,
       (ref) => {
-        let query: FirebaseFirestore.Query = ref.where('isPublished', '==', true);
+        let query: FirebaseFirestore.Query = ref;
+        
+        // Only filter by isPublished if NOT admin, or if explicitly requested
+        const publishedOnly = searchParams.get('publishedOnly') === 'true';
+        if (!isAdmin || publishedOnly) {
+           query = query.where('isPublished', '==', true);
+        }
 
         if (filters.subjectCode) {
           query = query.where('subjectCode', '==', filters.subjectCode);
@@ -56,6 +68,9 @@ export async function GET(request: NextRequest) {
         
         const uploadedBy = new URL(request.url).searchParams.get('uploadedBy');
         if (uploadedBy) {
+          // If not admin, can only filter by self? Or allowed?
+          // Standard users probably shouldn't see who uploaded what via API? 
+          // But 'uploadedBy' filter is useful for admins.
           query = query.where('uploadedBy', '==', uploadedBy);
         }
 

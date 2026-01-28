@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Plus, X } from 'lucide-react';
+import { Upload, FileText, Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Department, SubjectType, Subject } from '@/types';
 import { SEMESTERS, PROGRAM_TYPES, getYearOptions, MAX_FILE_SIZE, ALLOWED_EXTENSIONS } from '@/constants';
@@ -24,6 +24,7 @@ export default function AdminUploadPage() {
     const [yearOfExam, setYearOfExam] = useState(new Date().getFullYear());
     const [description, setDescription] = useState('');
     const [file, setFile] = useState<File | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Data state
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -37,7 +38,6 @@ export default function AdminUploadPage() {
     const [showNewDepartment, setShowNewDepartment] = useState(false);
     const [newDepartmentName, setNewDepartmentName] = useState('');
     const [newDepartmentCode, setNewDepartmentCode] = useState('');
-    const [isDragging, setIsDragging] = useState(false);
 
     const yearOptions = getYearOptions();
 
@@ -170,18 +170,16 @@ export default function AdminUploadPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
-
         if (!file) {
-            setError('Please select a file to upload');
+            setError('Please upload a file');
             return;
         }
 
         setLoading(true);
+        setError('');
+        setSuccess('');
 
         try {
-            // Create FormData for file upload
             const formData = new FormData();
             formData.append('file', file);
             formData.append('subjectCode', subjectCode);
@@ -193,7 +191,6 @@ export default function AdminUploadPage() {
             formData.append('semester', semester.toString());
             formData.append('yearOfExam', yearOfExam.toString());
             formData.append('description', description);
-            formData.append('uploadedBy', user?.id || '');
 
             const res = await fetch('/api/papers/upload', {
                 method: 'POST',
@@ -203,17 +200,17 @@ export default function AdminUploadPage() {
             if (res.ok) {
                 setSuccess('Paper uploaded successfully!');
                 // Reset form
-                setSubjectCode('');
-                setSubjectName('');
                 setQnNumber('');
-                setDescription('');
                 setFile(null);
+                setDescription('');
+                window.scrollTo(0, 0);
             } else {
                 const data = await res.json();
                 setError(data.error || 'Failed to upload paper');
             }
         } catch (error) {
             setError('An unexpected error occurred');
+            console.error(error);
         } finally {
             setLoading(false);
         }
@@ -223,79 +220,124 @@ export default function AdminUploadPage() {
         <div className={styles.page}>
             <div className={styles.header}>
                 <h1 className={styles.title}>Upload Question Paper</h1>
-                <p className={styles.subtitle}>Upload a new question paper to the Question Hub repository</p>
+                <p className={styles.subtitle}>Add a single question paper to the database</p>
             </div>
 
             <form onSubmit={handleSubmit} className={styles.form}>
-                {/* Messages */}
                 {error && <div className={styles.error}>{error}</div>}
                 {success && <div className={styles.success}>{success}</div>}
 
                 <div className={styles.formGrid}>
                     {/* Subject Code */}
                     <div className={styles.field}>
-                        <label htmlFor="subjectCode" className={styles.label}>
+                        <label className={styles.label}>
                             Subject Code <span className={styles.required}>*</span>
                         </label>
                         <input
-                            id="subjectCode"
                             type="text"
                             value={subjectCode}
                             onChange={(e) => setSubjectCode(e.target.value.toUpperCase())}
-                            placeholder="E.G. BCA3CJ201"
+                            placeholder="e.g. BCA101"
                             className={styles.input}
                             required
                         />
-                        <p className={styles.hint}>Auto-fills subject name if exists</p>
                     </div>
 
                     {/* Subject Name */}
                     <div className={styles.field}>
-                        <label htmlFor="subjectName" className={styles.label}>
+                        <label className={styles.label}>
                             Subject Name <span className={styles.required}>*</span>
                         </label>
                         <input
-                            id="subjectName"
                             type="text"
                             value={subjectName}
                             onChange={(e) => setSubjectName(e.target.value)}
-                            placeholder="E.G. Computer Networks"
+                            placeholder="e.g. Mathematics"
                             className={styles.input}
                             required
                         />
                     </div>
 
-                    {/* QN Number */}
+                    {/* Question Paper Number */}
                     <div className={styles.field}>
-                        <label htmlFor="qnNumber" className={styles.label}>
-                            Question Paper Code <span className={styles.required}>*</span>
+                        <label className={styles.label}>
+                            QN Number <span className={styles.required}>*</span>
                         </label>
                         <input
-                            id="qnNumber"
                             type="text"
                             value={qnNumber}
                             onChange={(e) => setQnNumber(e.target.value)}
-                            placeholder="E.G. 133750"
+                            placeholder="e.g. 133858"
                             className={styles.input}
                             required
                         />
+                        <p className={styles.hint}>Unique question paper identifier</p>
                     </div>
 
-                    {/* Year */}
+                    {/* Department */}
                     <div className={styles.field}>
-                        <label htmlFor="yearOfExam" className={styles.label}>
-                            Year of Examination <span className={styles.required}>*</span>
+                        <label className={styles.label}>
+                            Department <span className={styles.required}>*</span>
+                        </label>
+                        <div className={styles.selectWithAdd}>
+                            <select
+                                value={departmentId}
+                                onChange={(e) => setDepartmentId(e.target.value)}
+                                className={styles.select}
+                                required
+                            >
+                                <option value="">Select Department</option>
+                                {departments.map((dept) => (
+                                    <option key={dept.id} value={dept.id}>
+                                        {dept.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setShowNewDepartment(true)}
+                                className={styles.addButton}
+                                title="Add Department"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Subject Type */}
+                    <div className={styles.field}>
+                        <label className={styles.label}>
+                            Subject Type <span className={styles.required}>*</span>
                         </label>
                         <select
-                            id="yearOfExam"
-                            value={yearOfExam}
-                            onChange={(e) => setYearOfExam(parseInt(e.target.value))}
+                            value={subjectTypeId}
+                            onChange={(e) => setSubjectTypeId(e.target.value)}
                             className={styles.select}
                             required
                         >
-                            {yearOptions.map((year) => (
-                                <option key={year.value} value={year.value}>
-                                    {year.label}
+                            <option value="">Select Type</option>
+                            {subjectTypes.map((type) => (
+                                <option key={type.id} value={type.id}>
+                                    {type.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Program Type */}
+                    <div className={styles.field}>
+                        <label className={styles.label}>
+                            Program Type <span className={styles.required}>*</span>
+                        </label>
+                        <select
+                            value={programType}
+                            onChange={(e) => setProgramType(e.target.value)}
+                            className={styles.select}
+                            required
+                        >
+                            {PROGRAM_TYPES.map((type) => (
+                                <option key={type.value} value={type.value}>
+                                    {type.label}
                                 </option>
                             ))}
                         </select>
@@ -303,13 +345,12 @@ export default function AdminUploadPage() {
 
                     {/* Semester */}
                     <div className={styles.field}>
-                        <label htmlFor="semester" className={styles.label}>
+                        <label className={styles.label}>
                             Semester <span className={styles.required}>*</span>
                         </label>
                         <select
-                            id="semester"
                             value={semester}
-                            onChange={(e) => setSemester(parseInt(e.target.value))}
+                            onChange={(e) => setSemester(Number(e.target.value))}
                             className={styles.select}
                             required
                         >
@@ -321,72 +362,20 @@ export default function AdminUploadPage() {
                         </select>
                     </div>
 
-                    {/* Department */}
+                    {/* Year of Exam */}
                     <div className={styles.field}>
-                        <label htmlFor="department" className={styles.label}>
-                            Department
-                        </label>
-                        <div className={styles.selectWithAdd}>
-                            <select
-                                id="department"
-                                value={departmentId}
-                                onChange={(e) => setDepartmentId(e.target.value)}
-                                className={styles.select}
-                            >
-                                <option value="">Select department</option>
-                                {departments.map((dept) => (
-                                    <option key={dept.id} value={dept.id}>
-                                        {dept.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                type="button"
-                                onClick={() => setShowNewDepartment(true)}
-                                className={styles.addButton}
-                                title="Add new department"
-                            >
-                                <Plus size={18} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Subject Type */}
-                    <div className={styles.field}>
-                        <label htmlFor="subjectType" className={styles.label}>
-                            Subject Type <span className={styles.required}>*</span>
+                        <label className={styles.label}>
+                            Year of Exam <span className={styles.required}>*</span>
                         </label>
                         <select
-                            id="subjectType"
-                            value={subjectTypeId}
-                            onChange={(e) => setSubjectTypeId(e.target.value)}
+                            value={yearOfExam}
+                            onChange={(e) => setYearOfExam(Number(e.target.value))}
                             className={styles.select}
                             required
                         >
-                            <option value="">Select type</option>
-                            {subjectTypes.map((type) => (
-                                <option key={type.id} value={type.id}>
-                                    {type.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Program Type */}
-                    <div className={styles.field}>
-                        <label htmlFor="programType" className={styles.label}>
-                            Program Type <span className={styles.required}>*</span>
-                        </label>
-                        <select
-                            id="programType"
-                            value={programType}
-                            onChange={(e) => setProgramType(e.target.value)}
-                            className={styles.select}
-                            required
-                        >
-                            {PROGRAM_TYPES.map((prog) => (
-                                <option key={prog.value} value={prog.value}>
-                                    {prog.label}
+                            {yearOptions.map((year) => (
+                                <option key={year.value} value={year.value}>
+                                    {year.label}
                                 </option>
                             ))}
                         </select>
@@ -394,12 +383,9 @@ export default function AdminUploadPage() {
                 </div>
 
                 {/* Description */}
-                <div className={styles.field}>
-                    <label htmlFor="description" className={styles.label}>
-                        Description (Optional)
-                    </label>
+                <div className={styles.field} style={{ marginBottom: 'var(--space-5)' }}>
+                    <label className={styles.label}>Description (Optional)</label>
                     <textarea
-                        id="description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Any additional notes about this paper..."
@@ -469,31 +455,35 @@ export default function AdminUploadPage() {
                     <div className={styles.modalContent}>
                         <h3>Add New Department</h3>
                         <div className={styles.modalFields}>
-                            <input
-                                type="text"
-                                placeholder="Department Name"
-                                value={newDepartmentName}
-                                onChange={(e) => setNewDepartmentName(e.target.value)}
-                                className={styles.input}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Department Code (e.g., CSE)"
-                                value={newDepartmentCode}
-                                onChange={(e) => setNewDepartmentCode(e.target.value.toUpperCase())}
-                                className={styles.input}
-                            />
+                            <div className={styles.field}>
+                                <label className={styles.label}>Name</label>
+                                <input
+                                    type="text"
+                                    value={newDepartmentName}
+                                    onChange={(e) => setNewDepartmentName(e.target.value)}
+                                    placeholder="e.g. Computer Science"
+                                    className={styles.input}
+                                />
+                            </div>
+                            <div className={styles.field}>
+                                <label className={styles.label}>Code</label>
+                                <input
+                                    type="text"
+                                    value={newDepartmentCode}
+                                    onChange={(e) => setNewDepartmentCode(e.target.value)}
+                                    placeholder="e.g. CS"
+                                    className={styles.input}
+                                />
+                            </div>
                         </div>
                         <div className={styles.modalActions}>
                             <button
-                                type="button"
                                 onClick={() => setShowNewDepartment(false)}
                                 className={styles.cancelButton}
                             >
                                 Cancel
                             </button>
                             <button
-                                type="button"
                                 onClick={handleAddDepartment}
                                 className={styles.confirmButton}
                             >
