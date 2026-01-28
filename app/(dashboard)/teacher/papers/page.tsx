@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Download, Trash2, Eye } from 'lucide-react';
 import { Paper } from '@/types';
 import { formatFileSize, formatDate } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import styles from './page.module.css';
@@ -12,10 +13,14 @@ export default function TeacherPapersPage() {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const { user } = useAuth();
+
     useEffect(() => {
         const fetchPapers = async () => {
+            if (!user?.id) return;
+
             try {
-                const res = await fetch('/api/papers?limit=100');
+                const res = await fetch(`/api/papers?uploadedBy=${user.id}&limit=100`);
                 if (res.ok) {
                     const data = await res.json();
                     setPapers(data.items || []);
@@ -28,7 +33,7 @@ export default function TeacherPapersPage() {
         };
 
         fetchPapers();
-    }, []);
+    }, [user?.id]);
 
     if (loading) {
         return (

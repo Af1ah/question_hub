@@ -50,7 +50,7 @@
     justify-content: center;
     width: 72px;
     height: 72px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background-color: var(--color-primary);
     border-radius: var(--radius-lg);
     color: var(--text-inverse);
     flex-shrink: 0;
@@ -176,7 +176,7 @@
     justify-content: center;
     gap: var(--space-2);
     padding: var(--space-3) var(--space-6);
-    background: linear-gradient(135deg, var(--color-success) 0%, #059669 100%);
+    background-color: var(--color-success);
     color: var(--text-inverse);
     border-radius: var(--radius-md);
     font-weight: var(--font-medium);

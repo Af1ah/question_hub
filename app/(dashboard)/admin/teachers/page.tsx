@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, Mail, Check, X, User } from 'lucide-react';
-import { Teacher, Department } from '@/types';
+import { UserPlus, Mail, Check, X, User as UserIcon, Trash2, Shield, GraduationCap, ArrowRightLeft } from 'lucide-react';
+import { User, Department } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import styles from './page.module.css';
 
-export default function AdminTeachersPage() {
-    const [teachers, setTeachers] = useState<Teacher[]>([]);
+export default function AdminUsersPage() {
+    const [users, setUsers] = useState<User[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInviteModal, setShowInviteModal] = useState(false);
+
+    // Filter State
+    const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher'>('all');
 
     // Invite form
     const [inviteEmail, setInviteEmail] = useState('');
@@ -22,24 +25,25 @@ export default function AdminTeachersPage() {
     const [inviteSuccess, setInviteSuccess] = useState('');
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [teachersRes, deptsRes] = await Promise.all([
-                    fetch('/api/teachers'),
-                    fetch('/api/departments'),
-                ]);
-
-                if (teachersRes.ok) setTeachers(await teachersRes.json());
-                if (deptsRes.ok) setDepartments(await deptsRes.json());
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
     }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [usersRes, deptsRes] = await Promise.all([
+                fetch('/api/users'),
+                fetch('/api/departments'),
+            ]);
+
+            if (usersRes.ok) setUsers(await usersRes.json());
+            if (deptsRes.ok) setDepartments(await deptsRes.json());
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -59,8 +63,8 @@ export default function AdminTeachersPage() {
             });
 
             if (res.ok) {
-                const newTeacher = await res.json();
-                setTeachers([...teachers, newTeacher]);
+                const newUser = await res.json();
+                setUsers([...users, newUser]);
                 setInviteSuccess('Invitation sent successfully!');
                 setInviteEmail('');
                 setInviteName('');
@@ -68,7 +72,7 @@ export default function AdminTeachersPage() {
                 setTimeout(() => setShowInviteModal(false), 2000);
             } else {
                 const data = await res.json();
-                setInviteError(data.error || 'Failed to invite teacher');
+                setInviteError(data.error || 'Failed to invite user');
             }
         } catch (error) {
             setInviteError('An unexpected error occurred');
@@ -76,6 +80,48 @@ export default function AdminTeachersPage() {
             setInviting(false);
         }
     };
+
+    const handleDeleteUser = async (userId: string) => {
+        if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+
+        try {
+            const res = await fetch(`/api/users?id=${userId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setUsers(users.filter(u => u.id !== userId));
+            } else {
+                alert('Failed to delete user');
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Error deleting user');
+        }
+    };
+
+    const handleRoleSwitch = async (userId: string, currentRole: string) => {
+        const newRole = currentRole === 'admin' ? 'teacher' : 'admin';
+        if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+
+        try {
+            const res = await fetch('/api/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, role: newRole }),
+            });
+
+            if (res.ok) {
+                setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+            } else {
+                alert('Failed to update role');
+            }
+        } catch (error) {
+            console.error('Error updating role:', error);
+            alert('Error updating role');
+        }
+    };
+
+    const filteredUsers = roleFilter === 'all'
+        ? users
+        : users.filter(u => u.role === roleFilter);
 
     if (loading) {
         return (
@@ -91,48 +137,79 @@ export default function AdminTeachersPage() {
         <div className={styles.page}>
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>Manage Teachers</h1>
-                    <p className={styles.subtitle}>Invite and manage teacher accounts</p>
+                    <h1 className={styles.title}>Manage Users</h1>
+                    <p className={styles.subtitle}>Manage admins and teachers</p>
                 </div>
-                <button
-                    onClick={() => setShowInviteModal(true)}
-                    className={styles.inviteButton}
-                >
-                    <UserPlus size={18} />
-                    <span>Invite Teacher</span>
-                </button>
+                <div className={styles.headerActions}>
+                    <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value as any)}
+                        className={styles.roleFilter}
+                    >
+                        <option value="all">All Roles</option>
+                        <option value="admin">Admins</option>
+                        <option value="teacher">Teachers</option>
+                    </select>
+                    <button
+                        onClick={() => setShowInviteModal(true)}
+                        className={styles.inviteButton}
+                    >
+                        <UserPlus size={18} />
+                        <span>Invite Teacher</span>
+                    </button>
+                </div>
             </div>
 
-            {teachers.length > 0 ? (
+            {filteredUsers.length > 0 ? (
                 <div className={styles.tableWrapper}>
                     <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Email</th>
+                                <th>Role</th>
                                 <th>Department</th>
-                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {teachers.map((teacher) => (
-                                <tr key={teacher.id}>
+                            {filteredUsers.map((user) => (
+                                <tr key={user.id}>
                                     <td>
                                         <div className={styles.nameCell}>
                                             <div className={styles.avatar}>
-                                                <User size={16} />
+                                                <UserIcon size={16} />
                                             </div>
-                                            <span>{teacher.displayName}</span>
+                                            <span>{user.displayName}</span>
                                         </div>
                                     </td>
-                                    <td>{teacher.email}</td>
+                                    <td>{user.email}</td>
                                     <td>
-                                        {departments.find(d => d.id === teacher.departmentId)?.name || '-'}
+                                        <span className={`${styles.roleBadge} ${user.role === 'admin' ? styles.admin : styles.teacher}`}>
+                                            {user.role === 'admin' ? <Shield size={12} /> : <GraduationCap size={12} />}
+                                            {user.role}
+                                        </span>
                                     </td>
                                     <td>
-                                        <span className={`${styles.status} ${teacher.isActive ? styles.active : styles.inactive}`}>
-                                            {teacher.isActive ? 'Active' : 'Inactive'}
-                                        </span>
+                                        {user.departmentId ? departments.find(d => d.id === user.departmentId)?.name : '-'}
+                                    </td>
+                                    <td>
+                                        <div className={styles.actions}>
+                                            <button
+                                                onClick={() => handleRoleSwitch(user.id, user.role)}
+                                                className={styles.iconButton}
+                                                title="Switch Role"
+                                            >
+                                                <ArrowRightLeft size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteUser(user.id)}
+                                                className={`${styles.iconButton} ${styles.delete}`}
+                                                title="Delete User"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -141,12 +218,12 @@ export default function AdminTeachersPage() {
                 </div>
             ) : (
                 <EmptyState
-                    icon={<User size={48} />}
-                    title="No Teachers Yet"
-                    description="Invite teachers to help manage question papers."
+                    icon={<UserIcon size={48} />}
+                    title="No Users Found"
+                    description="No users match your current filter."
                     action={
                         <button onClick={() => setShowInviteModal(true)} className={styles.emptyInviteButton}>
-                            Invite Your First Teacher
+                            Invite Teacher
                         </button>
                     }
                 />

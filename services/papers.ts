@@ -1,21 +1,20 @@
 import {
-  getDocuments,
-  getDocument,
-  addDocument,
-  updateDocument,
-  deleteDocument,
-  getPaginatedDocuments,
-  where,
-  orderBy,
+  adminGetDocuments,
+  adminGetDocument,
+  adminAddDocument,
+  adminUpdateDocument,
+  adminDeleteDocument,
+  adminDocumentExists,
   Timestamp,
-} from '@/lib/firebase/firestore';
+} from '@/lib/firebase/admin';
 import { COLLECTIONS, DEFAULT_PAGE_SIZE } from '@/constants';
 import { Paper, PaperFormData, PaperFilters, PaginatedResponse } from '@/types';
 import { generatePaperFileName, generatePaperSlug } from '@/lib/utils';
 import { uploadPaperFile, deletePaperFile } from '@/lib/firebase/storage';
+import { getAdminDb } from '@/lib/firebase/admin';
 
 // ============================================================
-// Paper Service
+// Paper Service (Server-Side Admin SDK)
 // ============================================================
 
 /**
@@ -31,9 +30,9 @@ export async function createPaper(
   }
 
   // Check for duplicate QN number
-  const existingPapers = await getDocuments<Paper>(COLLECTIONS.PAPERS, [
-    where('qnNumber', '==', data.qnNumber),
-  ]);
+  const existingPapers = await adminGetDocuments<Paper>(COLLECTIONS.PAPERS, (ref) => 
+    ref.where('qnNumber', '==', data.qnNumber)
+  );
 
   if (existingPapers.length > 0) {
     throw new Error('A paper with this question number already exists');
@@ -43,7 +42,8 @@ export async function createPaper(
   const fileName = generatePaperFileName(data.subjectCode, data.yearOfExam, data.qnNumber);
   const seoSlug = generatePaperSlug(data.subjectName, data.yearOfExam, data.qnNumber);
 
-  // Upload file to storage
+  // Upload file to storage (Client SDK used here as it handles File object nicely)
+  // Note: If this fails in production (Node.js), we might need an Admin SDK version for storage.
   const uploadResult = await uploadPaperFile(data.file, fileName);
 
   // Get or create subject
@@ -73,7 +73,7 @@ export async function createPaper(
     seoSlug,
   };
 
-  const paperId = await addDocument(COLLECTIONS.PAPERS, paperData);
+  const paperId = await adminAddDocument(COLLECTIONS.PAPERS, paperData);
 
   return {
     id: paperId,
@@ -96,51 +96,39 @@ export async function getPapers(
     semester,
     yearOfExam,
     page = 1,
-    limit = DEFAULT_PAGE_SIZE,
+    limit: limitVal = DEFAULT_PAGE_SIZE,
   } = filters;
 
-  // Build query constraints
-  const constraints = [];
+  const db = getAdminDb();
+  let query = db.collection(COLLECTIONS.PAPERS).where('isPublished', '==', true);
 
-  // Only show published papers
-  constraints.push(where('isPublished', '==', true));
-
-  if (subjectCode) {
-    constraints.push(where('subjectCode', '==', subjectCode));
-  }
-
-  if (departmentId) {
-    constraints.push(where('departmentId', '==', departmentId));
-  }
-
-  if (subjectTypeId) {
-    constraints.push(where('subjectTypeId', '==', subjectTypeId));
-  }
-
-  if (programType) {
-    constraints.push(where('programType', '==', programType));
-  }
-
-  if (semester) {
-    constraints.push(where('semester', '==', semester));
-  }
-
-  if (yearOfExam) {
-    constraints.push(where('yearOfExam', '==', yearOfExam));
-  }
+  if (subjectCode) query = query.where('subjectCode', '==', subjectCode);
+  if (departmentId) query = query.where('departmentId', '==', departmentId);
+  if (subjectTypeId) query = query.where('subjectTypeId', '==', subjectTypeId);
+  if (programType) query = query.where('programType', '==', programType);
+  if (semester) query = query.where('semester', '==', semester);
+  if (yearOfExam) query = query.where('yearOfExam', '==', yearOfExam);
 
   // Order by newest first
-  constraints.push(orderBy('uploadedAt', 'desc'));
+  query = query.orderBy('uploadedAt', 'desc');
 
-  // Get paginated results
-  const { documents, hasMore } = await getPaginatedDocuments<Paper>(
-    COLLECTIONS.PAPERS,
-    constraints,
-    limit
-  );
+  // get total count for pagination (Admin SDK)
+  const countSnapshot = await query.count().get();
+  const total = countSnapshot.data().count;
 
-  // If search is provided, filter results client-side
-  // (Firestore doesn't support full-text search)
+  // Pagination
+  const offset = (page - 1) * limitVal;
+  query = query.offset(offset).limit(limitVal);
+
+  const snapshot = await query.get();
+  const documents = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Paper[];
+
+  // Client-side search (if needed) -- reusing logic but be aware limit applies before filtering
+  // Ideal solution involves full-text search engine (Algolia/Typesense)
+  // For now, if search string is present, we might miss results if we paginate first.
   let filteredDocs = documents;
   if (search) {
     const searchLower = search.toLowerCase();
@@ -154,10 +142,10 @@ export async function getPapers(
 
   return {
     items: filteredDocs,
-    total: filteredDocs.length,
+    total, // Note: Total count matches query filters, but not search text
     page,
-    limit,
-    hasMore,
+    limit: limitVal,
+    hasMore: offset + documents.length < total,
   };
 }
 
@@ -165,17 +153,16 @@ export async function getPapers(
  * Get paper by ID
  */
 export async function getPaperById(id: string): Promise<Paper | null> {
-  return getDocument<Paper>(COLLECTIONS.PAPERS, id);
+  return adminGetDocument<Paper>(COLLECTIONS.PAPERS, id);
 }
 
 /**
  * Get paper by SEO slug
  */
 export async function getPaperBySlug(slug: string): Promise<Paper | null> {
-  const papers = await getDocuments<Paper>(COLLECTIONS.PAPERS, [
-    where('seoSlug', '==', slug),
-    where('isPublished', '==', true),
-  ]);
+  const papers = await adminGetDocuments<Paper>(COLLECTIONS.PAPERS, (ref) => 
+    ref.where('seoSlug', '==', slug).where('isPublished', '==', true)
+  );
 
   return papers.length > 0 ? papers[0] : null;
 }
@@ -185,14 +172,14 @@ export async function getPaperBySlug(slug: string): Promise<Paper | null> {
  */
 export async function getPapersByUploader(
   uploadedBy: string,
-  limit?: number
+  limitVal?: number
 ): Promise<Paper[]> {
-  const constraints = [
-    where('uploadedBy', '==', uploadedBy),
-    orderBy('uploadedAt', 'desc'),
-  ];
-
-  return getDocuments<Paper>(COLLECTIONS.PAPERS, constraints);
+  const papers = await adminGetDocuments<Paper>(COLLECTIONS.PAPERS, (ref) => {
+    let q = ref.where('uploadedBy', '==', uploadedBy).orderBy('uploadedAt', 'desc');
+    if (limitVal) q = q.limit(limitVal);
+    return q;
+  });
+  return papers;
 }
 
 /**
@@ -226,14 +213,14 @@ export async function updatePaper(
     }
   }
 
-  await updateDocument(COLLECTIONS.PAPERS, id, updates);
+  await adminUpdateDocument(COLLECTIONS.PAPERS, id, updates);
 }
 
 /**
  * Delete paper (soft delete - unpublish)
  */
 export async function deletePaper(id: string): Promise<void> {
-  await updateDocument(COLLECTIONS.PAPERS, id, { isPublished: false });
+  await adminUpdateDocument(COLLECTIONS.PAPERS, id, { isPublished: false });
 }
 
 /**
@@ -247,7 +234,7 @@ export async function permanentlyDeletePaper(id: string): Promise<void> {
     await deletePaperFile(`papers/${paper.fileName}`);
     
     // Delete document
-    await deleteDocument(COLLECTIONS.PAPERS, id);
+    await adminDeleteDocument(COLLECTIONS.PAPERS, id);
   }
 }
 
@@ -257,7 +244,7 @@ export async function permanentlyDeletePaper(id: string): Promise<void> {
 export async function incrementDownloadCount(id: string): Promise<void> {
   const paper = await getPaperById(id);
   if (paper) {
-    await updateDocument(COLLECTIONS.PAPERS, id, {
+    await adminUpdateDocument(COLLECTIONS.PAPERS, id, {
       downloadCount: (paper.downloadCount || 0) + 1,
     });
   }
@@ -266,11 +253,10 @@ export async function incrementDownloadCount(id: string): Promise<void> {
 /**
  * Get recent papers for homepage
  */
-export async function getRecentPapers(limit: number = 6): Promise<Paper[]> {
-  return getDocuments<Paper>(COLLECTIONS.PAPERS, [
-    where('isPublished', '==', true),
-    orderBy('uploadedAt', 'desc'),
-  ]);
+export async function getRecentPapers(limitVal: number = 6): Promise<Paper[]> {
+  return adminGetDocuments<Paper>(COLLECTIONS.PAPERS, (ref) => 
+    ref.where('isPublished', '==', true).orderBy('uploadedAt', 'desc').limit(limitVal)
+  );
 }
 
 // ============================================================
@@ -286,16 +272,16 @@ async function getOrCreateSubject(
   departmentId: string,
   createdBy: string
 ): Promise<string> {
-  const existingSubjects = await getDocuments<{ id: string }>(COLLECTIONS.SUBJECTS, [
-    where('code', '==', code),
-  ]);
+  const existingSubjects = await adminGetDocuments<{ id: string }>(COLLECTIONS.SUBJECTS, (ref) => 
+    ref.where('code', '==', code)
+  );
 
   if (existingSubjects.length > 0) {
     return existingSubjects[0].id;
   }
 
   // Create new subject
-  return addDocument(COLLECTIONS.SUBJECTS, {
+  return adminAddDocument(COLLECTIONS.SUBJECTS, {
     code,
     name,
     departmentId,

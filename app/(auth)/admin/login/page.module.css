@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background-color: var(--color-primary);
     padding: var(--space-6);
 }
 
@@ -153,7 +153,7 @@
     padding: var(--space-4);
     font-size: var(--text-base);
     font-weight: var(--font-medium);
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background-color: var(--color-primary);
     color: var(--text-inverse);
     border: none;
     border-radius: var(--radius-md);

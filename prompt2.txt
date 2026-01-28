@@ -1,0 +1,26 @@
+there need you to fix more changes.
+
+admin can add 
+
+- one admin can change user roles from teacher to admin and admin to teacher.
+- delete user
+- delete or edit qn paper(all over the site wide).
+- add filter on delete page tofilter by uploading date or user name.
+- add admin option to upload individual qn paper.
+- department creating option.
+
+teacher can add 
+- teacher for more secure.
+- add option to delete or edit the uploaded qn pappers thay updated.
+
+
+site wide.
+-reference/image copy 5.png is as u can see the left drawer took so much space adjust it. keep expand on hover or add expand button for eprsistence.
+- make that drawer in white bg. more white and cuverd soft toned website.
+-reference/image copy 6.png is as u can see add drag file and drop option there, cancel button. select qn bank year option.
+- remove that gradient from the site titles from alll.
+- remove gradient completly from this site.
+- remove emojies from the site.
+- site wide dark mode + color theme make sure all bg and text colors are visible. 
+
+

@@ -65,8 +65,10 @@
     transition: border-color var(--transition-fast);
 }
 
-.uploadArea:hover {
+.uploadArea:hover,
+.uploadAreaDragOver {
     border-color: var(--color-accent);
+    background-color: rgba(15, 52, 96, 0.05);
 }
 
 .fileInput {
@@ -176,7 +178,7 @@
 }
 
 .uploadButton {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background-color: var(--color-primary);
     border: none;
     color: var(--text-inverse);
 }

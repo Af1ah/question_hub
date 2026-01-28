@@ -4,7 +4,7 @@
 
 /* Hero Section */
 .hero {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+    background-color: var(--color-primary);
     padding: var(--space-16) var(--space-6);
     text-align: center;
     position: relative;
@@ -44,7 +44,7 @@
 }
 
 .highlight {
-    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    background-color: var(--color-accent);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

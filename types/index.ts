@@ -110,31 +110,41 @@ export interface SubjectTypeFormData {
 
 export type UserRole = 'admin' | 'teacher';
 
-export interface Teacher {
+export interface User {
   id: string;                 // Same as Firebase Auth UID
   email: string;
   displayName: string;
-  departmentId?: string;
-  passwordHash: string;       // Bcrypt hashed password
-  invitedBy: string;          // Admin UID
-  invitedAt: Timestamp;
+  role: UserRole;
+  departmentId?: string;      // Optional, mostly for teachers
+  passwordHash?: string;      // Bcrypt hashed password (optional if using auth provider only, but likely needed here)
+  invitedBy?: string;         // Admin UID (for teachers)
+  invitedAt?: Timestamp;
+  createdAt?: Timestamp;
   isActive: boolean;
   lastLoginAt?: Timestamp;
+  isLocked?: boolean;         // For admins
 }
+
+export type Teacher = User & { role: 'teacher' };
+export type Admin = User & { role: 'admin' };
+
+export interface UserFormData {
+  email: string;
+  displayName: string;
+  role: UserRole;
+  departmentId?: string;
+  password?: string;          // For initial creation
+}
+
+// Deprecated interfaces kept for temporary compatibility if needed, 
+// but re-mapped to the new structure where possible.
+// export interface Teacher { ... } - REMOVED favor of User type
+// export interface Admin { ... } - REMOVED favor of User type
 
 export interface TeacherFormData {
   email: string;
   displayName: string;
   departmentId?: string;
-}
-
-export interface Admin {
-  id: string;
-  email: string;
-  displayName: string;
-  passwordHash: string;       // Bcrypt hashed password
-  createdAt: Timestamp;
-  isLocked: boolean;          // Lock after initial setup
 }
 
 export interface AdminFormData {
@@ -200,6 +210,20 @@ export interface PaginatedResponse<T> {
 }
 
 // ============================================================
+// Invite Token Types
+// ============================================================
+
+export interface InviteToken {
+  id: string;
+  tokenHash: string;          // SHA-256 hash of the token
+  email: string;              // Teacher's email
+  teacherId: string;          // Reference to teacher document
+  expiresAt: Timestamp;       // Token expiration time
+  isUsed: boolean;            // Whether token has been used
+  createdAt: Timestamp;
+}
+
+// ============================================================
 // Email Types
 // ============================================================
 
@@ -207,6 +231,6 @@ export interface TeacherInviteEmail {
   to: string;
   teacherName: string;
   invitedBy: string;
-  loginLink: string;
-  tempPassword: string;
+  onboardingLink: string;     // Secure onboarding URL with token
 }
+

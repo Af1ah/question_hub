@@ -2,7 +2,7 @@ import { NextAuthOptions, User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 import { COLLECTIONS } from '@/constants';
-import { Admin, Teacher, UserRole } from '@/types';
+import { User as AppUser, UserRole } from '@/types';
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
@@ -74,10 +74,11 @@ function getAdminDb(): Firestore {
 // Auth Helper Functions
 // ============================================================
 
-async function findAdminByEmail(email: string): Promise<Admin | null> {
+async function findUserByEmail(email: string): Promise<AppUser | null> {
   try {
     const db = getAdminDb();
-    const snapshot = await db.collection(COLLECTIONS.ADMINS)
+    // Query the unified USERS collection
+    const snapshot = await db.collection(COLLECTIONS.USERS)
       .where('email', '==', email)
       .limit(1)
       .get();
@@ -85,27 +86,10 @@ async function findAdminByEmail(email: string): Promise<Admin | null> {
     if (snapshot.empty) return null;
     
     const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as Admin;
+    const data = doc.data();
+    return { id: doc.id, ...data } as unknown as AppUser;
   } catch (error) {
-    console.error('Error finding admin:', error);
-    return null;
-  }
-}
-
-async function findTeacherByEmail(email: string): Promise<Teacher | null> {
-  try {
-    const db = getAdminDb();
-    const snapshot = await db.collection(COLLECTIONS.TEACHERS)
-      .where('email', '==', email)
-      .limit(1)
-      .get();
-    
-    if (snapshot.empty) return null;
-    
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as Teacher;
-  } catch (error) {
-    console.error('Error finding teacher:', error);
+    console.error('Error finding user:', error);
     return null;
   }
 }
@@ -180,22 +164,27 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and password are required');
         }
 
-        const admin = await findAdminByEmail(credentials.email);
+        const user = await findUserByEmail(credentials.email);
         
-        if (!admin) {
+        // Check if user exists, has a password hash, and is an ADMIN
+        if (!user || !user.passwordHash || user.role !== 'admin') {
           throw new Error('Invalid credentials');
         }
 
-        const isValidPassword = await compare(credentials.password, admin.passwordHash);
+        const isValidPassword = await compare(credentials.password, user.passwordHash);
 
         if (!isValidPassword) {
           throw new Error('Invalid credentials');
         }
 
+        if (user.isLocked) {
+             throw new Error('Account is locked');
+        }
+
         return {
-          id: admin.id,
-          email: admin.email,
-          name: admin.displayName,
+          id: user.id,
+          email: user.email,
+          name: user.displayName,
           role: 'admin',
         };
       },
@@ -214,26 +203,27 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and password are required');
         }
 
-        const teacher = await findTeacherByEmail(credentials.email);
+        const user = await findUserByEmail(credentials.email);
         
-        if (!teacher) {
+        // Check if user exists, has password hash, and is a TEACHER
+        if (!user || !user.passwordHash || user.role !== 'teacher') {
           throw new Error('Invalid credentials');
         }
 
-        if (!teacher.isActive) {
+        if (!user.isActive) {
           throw new Error('Your account has been deactivated');
         }
 
-        const isValidPassword = await compare(credentials.password, teacher.passwordHash);
+        const isValidPassword = await compare(credentials.password, user.passwordHash);
 
         if (!isValidPassword) {
           throw new Error('Invalid credentials');
         }
 
         return {
-          id: teacher.id,
-          email: teacher.email,
-          name: teacher.displayName,
+          id: user.id,
+          email: user.email,
+          name: user.displayName,
           role: 'teacher',
         };
       },

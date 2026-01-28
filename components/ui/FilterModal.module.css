@@ -170,7 +170,7 @@
     padding: var(--space-3) var(--space-5);
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background-color: var(--color-primary);
     color: var(--text-inverse);
     border: none;
     border-radius: var(--radius-md);

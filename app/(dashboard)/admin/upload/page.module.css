@@ -166,6 +166,7 @@
 .fileLabelDragOver {
     border-color: var(--color-accent);
     background-color: rgba(15, 52, 96, 0.08);
+    /* slight dark blue tint on hover */
 }
 
 .fileInfo {

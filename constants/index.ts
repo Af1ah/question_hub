@@ -88,6 +88,8 @@ export const COLLECTIONS = {
   SUBJECT_TYPES: 'subjectTypes',
   TEACHERS: 'teachers',
   ADMINS: 'admins',
+  USERS: 'users',
+  INVITE_TOKENS: 'inviteTokens',
 } as const;
 
 // ============================================================

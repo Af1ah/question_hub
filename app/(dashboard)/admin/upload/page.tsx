@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileText, Plus, X } from 'lucide-react';
+import { Upload, Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Department, SubjectType, Subject } from '@/types';
 import { SEMESTERS, PROGRAM_TYPES, getYearOptions, MAX_FILE_SIZE, ALLOWED_EXTENSIONS } from '@/constants';
 import { formatFileSize } from '@/lib/utils';
 import styles from './page.module.css';
 
-export default function TeacherUploadPage() {
+export default function AdminUploadPage() {
     const router = useRouter();
     const { user } = useAuth();
 
@@ -223,7 +223,7 @@ export default function TeacherUploadPage() {
         <div className={styles.page}>
             <div className={styles.header}>
                 <h1 className={styles.title}>Upload Question Paper</h1>
-                <p className={styles.subtitle}>Fill in the details below to upload a new question paper</p>
+                <p className={styles.subtitle}>Upload a new question paper to the Question Hub repository</p>
             </div>
 
             <form onSubmit={handleSubmit} className={styles.form}>

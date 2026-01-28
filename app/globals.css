@@ -350,11 +350,13 @@ label {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background-color: var(--color-primary);
   color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-light);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }

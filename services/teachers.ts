@@ -8,20 +8,22 @@ import {
   Timestamp,
 } from '@/lib/firebase/firestore';
 import { COLLECTIONS } from '@/constants';
-import { Teacher, TeacherFormData } from '@/types';
+import { Teacher, TeacherFormData, UserRole } from '@/types';
 import { hash } from 'bcryptjs';
 import { sendTeacherInviteEmail } from './email';
 import { generateRandomString } from '@/lib/utils';
 
 // ============================================================
-// Teacher Service
+// Teacher Service (Now using Unified Users)
 // ============================================================
 
 /**
  * Get all teachers
  */
 export async function getTeachers(): Promise<Teacher[]> {
-  return getDocuments<Teacher>(COLLECTIONS.TEACHERS, [
+  // @ts-ignore - Unified collection returns User, casts to Teacher
+  return getDocuments<Teacher>(COLLECTIONS.USERS, [
+    where('role', '==', 'teacher'),
     orderBy('displayName', 'asc'),
   ]);
 }
@@ -30,7 +32,9 @@ export async function getTeachers(): Promise<Teacher[]> {
  * Get active teachers only
  */
 export async function getActiveTeachers(): Promise<Teacher[]> {
-  return getDocuments<Teacher>(COLLECTIONS.TEACHERS, [
+  // @ts-ignore
+  return getDocuments<Teacher>(COLLECTIONS.USERS, [
+    where('role', '==', 'teacher'),
     where('isActive', '==', true),
     orderBy('displayName', 'asc'),
   ]);
@@ -40,27 +44,32 @@ export async function getActiveTeachers(): Promise<Teacher[]> {
  * Get teacher by ID
  */
 export async function getTeacherById(id: string): Promise<Teacher | null> {
-  return getDocument<Teacher>(COLLECTIONS.TEACHERS, id);
+  const user = await getDocument<Teacher>(COLLECTIONS.USERS, id);
+  if (user && user.role === 'teacher') {
+    return user;
+  }
+  return null;
 }
 
 /**
  * Get teacher by email
  */
 export async function getTeacherByEmail(email: string): Promise<Teacher | null> {
-  const teachers = await getDocuments<Teacher>(COLLECTIONS.TEACHERS, [
+  // @ts-ignore
+  const teachers = await getDocuments<Teacher>(COLLECTIONS.USERS, [
     where('email', '==', email.toLowerCase()),
+    where('role', '==', 'teacher'),
   ]);
   return teachers.length > 0 ? teachers[0] : null;
 }
 
 /**
- * Invite a new teacher
- * Creates account with temporary password and sends invitation email
+ * @deprecated Use the /api/teachers/invite API route instead.
  */
 export async function inviteTeacher(
   data: TeacherFormData,
   invitedBy: string,
-  inviterName: string
+  _inviterName: string
 ): Promise<{ success: boolean; teacher?: Teacher; error?: string }> {
   // Check for existing teacher with same email
   const existing = await getTeacherByEmail(data.email);
@@ -68,42 +77,27 @@ export async function inviteTeacher(
     return { success: false, error: 'A teacher with this email already exists' };
   }
 
-  // Generate temporary password
-  const tempPassword = generateRandomString(12);
-  const passwordHash = await hash(tempPassword, 12);
-
-  // Create teacher document
   const teacherData = {
     email: data.email.toLowerCase(),
     displayName: data.displayName,
     departmentId: data.departmentId,
-    passwordHash,
+    passwordHash: '',
     invitedBy,
     invitedAt: Timestamp.now(),
-    isActive: true,
+    isActive: false,
+    needsOnboarding: true,
+    role: 'teacher' as UserRole,
   };
 
-  const teacherId = await addDocument(COLLECTIONS.TEACHERS, teacherData);
+  const teacherId = await addDocument(COLLECTIONS.USERS, teacherData);
 
   const teacher = {
     id: teacherId,
     ...teacherData,
+    role: 'teacher' as const,
   } as Teacher;
 
-  // Send invitation email
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const emailResult = await sendTeacherInviteEmail({
-    to: data.email,
-    teacherName: data.displayName,
-    invitedBy: inviterName,
-    loginLink: `${baseUrl}/teacher/login`,
-    tempPassword,
-  });
-
-  if (!emailResult.success) {
-    console.warn('Failed to send invitation email:', emailResult.error);
-    // Note: Teacher is still created, email just failed
-  }
+  console.warn('inviteTeacher() is deprecated. Use /api/teachers/invite instead.');
 
   return { success: true, teacher };
 }
@@ -120,7 +114,7 @@ export async function updateTeacher(
   if (data.displayName) updates.displayName = data.displayName;
   if (data.departmentId !== undefined) updates.departmentId = data.departmentId;
 
-  await updateDocument(COLLECTIONS.TEACHERS, id, updates);
+  await updateDocument(COLLECTIONS.USERS, id, updates);
 }
 
 /**
@@ -131,28 +125,28 @@ export async function updateTeacherPassword(
   newPassword: string
 ): Promise<void> {
   const passwordHash = await hash(newPassword, 12);
-  await updateDocument(COLLECTIONS.TEACHERS, id, { passwordHash });
+  await updateDocument(COLLECTIONS.USERS, id, { passwordHash });
 }
 
 /**
  * Deactivate teacher
  */
 export async function deactivateTeacher(id: string): Promise<void> {
-  await updateDocument(COLLECTIONS.TEACHERS, id, { isActive: false });
+  await updateDocument(COLLECTIONS.USERS, id, { isActive: false });
 }
 
 /**
  * Activate teacher
  */
 export async function activateTeacher(id: string): Promise<void> {
-  await updateDocument(COLLECTIONS.TEACHERS, id, { isActive: true });
+  await updateDocument(COLLECTIONS.USERS, id, { isActive: true });
 }
 
 /**
  * Update last login time
  */
 export async function updateTeacherLastLogin(id: string): Promise<void> {
-  await updateDocument(COLLECTIONS.TEACHERS, id, {
+  await updateDocument(COLLECTIONS.USERS, id, {
     lastLoginAt: Timestamp.now(),
   });
 }
@@ -161,7 +155,9 @@ export async function updateTeacherLastLogin(id: string): Promise<void> {
  * Get teachers by department
  */
 export async function getTeachersByDepartment(departmentId: string): Promise<Teacher[]> {
-  return getDocuments<Teacher>(COLLECTIONS.TEACHERS, [
+  // @ts-ignore
+  return getDocuments<Teacher>(COLLECTIONS.USERS, [
+    where('role', '==', 'teacher'),
     where('departmentId', '==', departmentId),
     where('isActive', '==', true),
     orderBy('displayName', 'asc'),

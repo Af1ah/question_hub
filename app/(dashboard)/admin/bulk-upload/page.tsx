@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, FileArchive, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileArchive, AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
 import styles from './page.module.css';
 
 interface UploadProgress {
@@ -22,6 +22,7 @@ export default function AdminBulkUploadPage() {
         total: 0,
         errors: [],
     });
+    const [isDragging, setIsDragging] = useState(false);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -118,6 +119,44 @@ export default function AdminBulkUploadPage() {
         }
     };
 
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const droppedFile = e.dataTransfer.files?.[0];
+        if (!droppedFile) return;
+
+        if (!droppedFile.name.endsWith('.zip')) {
+            setProgress({
+                status: 'error',
+                message: 'Please select a ZIP file',
+                processed: 0,
+                total: 0,
+                errors: [],
+            });
+            return;
+        }
+
+        setFile(droppedFile);
+        setProgress({
+            status: 'idle',
+            message: `Selected: ${droppedFile.name}`,
+            processed: 0,
+            total: 0,
+            errors: [],
+        });
+    };
+
     return (
         <div className={styles.page}>
             <div className={styles.header}>
@@ -149,7 +188,12 @@ export default function AdminBulkUploadPage() {
             </div>
 
             {/* Upload Area */}
-            <div className={styles.uploadArea}>
+            <div
+                className={`${styles.uploadArea} ${isDragging ? styles.uploadAreaDragOver : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -160,17 +204,29 @@ export default function AdminBulkUploadPage() {
                 />
 
                 {progress.status === 'idle' || progress.status === 'error' ? (
-                    <label htmlFor="zipFile" className={styles.uploadLabel}>
-                        <FileArchive size={48} />
-                        <span className={styles.uploadText}>
-                            {file ? file.name : 'Click to select ZIP file'}
-                        </span>
-                        {file && (
-                            <span className={styles.fileSize}>
-                                {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    <>
+                        <label htmlFor="zipFile" className={styles.uploadLabel}>
+                            <FileArchive size={48} />
+                            <span className={styles.uploadText}>
+                                {isDragging ? 'Drop ZIP file here' : (file ? file.name : 'Click or drag ZIP file here')}
                             </span>
+                            {file && (
+                                <span className={styles.fileSize}>
+                                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                </span>
+                            )}
+                        </label>
+                        {file && (
+                            <button
+                                type="button"
+                                onClick={resetUpload}
+                                className={styles.cancelButton}
+                                aria-label="Cancel"
+                            >
+                                <X size={20} />
+                            </button>
                         )}
-                    </label>
+                    </>
                 ) : (
                     <div className={styles.progressArea}>
                         {progress.status === 'validating' || progress.status === 'uploading' ? (

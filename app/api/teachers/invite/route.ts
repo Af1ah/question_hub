@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { addDocument, getDocuments, where, Timestamp } from '@/lib/firebase/firestore';
+import { adminGetDocuments, adminAddDocument, Timestamp } from '@/lib/firebase/admin';
 import { sendTeacherInviteEmail } from '@/services/email';
 import { COLLECTIONS } from '@/constants';
-import { generateRandomString } from '@/lib/utils';
-import { hash } from 'bcryptjs';
+import { generateInviteToken, hashToken, getTokenExpiration } from '@/lib/token';
 
 /**
  * POST /api/teachers/invite
  * Invite a new teacher (admin only)
+ * Creates teacher record and sends secure onboarding link
  */
 export async function POST(request: NextRequest) {
   try {
@@ -33,9 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing teacher
-    const existing = await getDocuments(COLLECTIONS.TEACHERS, [
-      where('email', '==', email.toLowerCase()),
-    ]);
+    const existing = await adminGetDocuments(
+      COLLECTIONS.USERS,
+      (ref) => ref.where('email', '==', email.toLowerCase()).where('role', '==', 'teacher')
+    );
 
     if (existing.length > 0) {
       return NextResponse.json(
@@ -44,31 +45,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate temporary password
-    const tempPassword = generateRandomString(12);
-    const passwordHash = await hash(tempPassword, 12);
-
-    // Create teacher document
+    // Create teacher document (without password - they'll set it during onboarding)
     const teacherData = {
       email: email.toLowerCase(),
       displayName,
       departmentId: departmentId || '',
-      passwordHash,
+      passwordHash: '', // Will be set during onboarding
       invitedBy: session.user.id,
       invitedAt: Timestamp.now(),
-      isActive: true,
+      isActive: false, // Activate after onboarding
+      needsOnboarding: true,
+      role: 'teacher' as const,
     };
 
-    const teacherId = await addDocument(COLLECTIONS.TEACHERS, teacherData);
+    const teacherId = await adminAddDocument(COLLECTIONS.USERS, teacherData);
+
+    // Generate secure invite token
+    const plainToken = generateInviteToken();
+    const tokenHash = hashToken(plainToken);
+    const expiresAt = getTokenExpiration(7); // 7 days
+
+    // Store hashed token in Firestore
+    await adminAddDocument(COLLECTIONS.INVITE_TOKENS, {
+      tokenHash,
+      email: email.toLowerCase(),
+      teacherId,
+      expiresAt: Timestamp.fromDate(expiresAt),
+      isUsed: false,
+    });
+
+    // Build onboarding link with plain token
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const onboardingLink = `${baseUrl}/teacher/onboard?token=${plainToken}`;
+
+    // Log for development (in production, only email would have the link)
+    console.log(`📧 Onboarding link for ${email}: ${onboardingLink}`);
 
     // Send invitation email
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const emailResult = await sendTeacherInviteEmail({
       to: email,
       teacherName: displayName,
-      invitedBy: session.user.name,
-      loginLink: `${baseUrl}/teacher/login`,
-      tempPassword,
+      invitedBy: session.user.name || 'Admin',
+      onboardingLink,
     });
 
     if (!emailResult.success) {
@@ -80,8 +98,10 @@ export async function POST(request: NextRequest) {
       email: email.toLowerCase(),
       displayName,
       departmentId: departmentId || '',
-      isActive: true,
+      isActive: false,
       emailSent: emailResult.success,
+      // Only include onboarding link in dev for testing
+      ...(process.env.NODE_ENV === 'development' && { onboardingLink }),
     });
   } catch (error) {
     console.error('Error inviting teacher:', error);
@@ -91,3 +111,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

@@ -51,7 +51,7 @@
     justify-content: center;
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background-color: var(--color-primary);
     border-radius: var(--radius-lg);
     color: var(--text-inverse);
     flex-shrink: 0;

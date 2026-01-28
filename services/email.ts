@@ -22,7 +22,7 @@ const createTransporter = () => {
 // ============================================================
 
 const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; html: string; text: string } => {
-  const subject = `You've been invited to Question Hub`;
+  const subject = `You're invited to join Question Hub`;
   
   const html = `
 <!DOCTYPE html>
@@ -54,36 +54,33 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
               </h2>
               
               <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                You've been invited by <strong>${data.invitedBy}</strong> to join Question Hub as a teacher. You can now upload and manage question papers.
+                <strong>${data.invitedBy}</strong> has invited you to join Question Hub as a teacher. You'll be able to upload and manage question papers for students.
               </p>
               
-              <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 30px 0;">
-                <p style="margin: 0 0 10px; color: #1a1a2e; font-size: 14px; font-weight: 600;">
-                  Your temporary login credentials:
-                </p>
-                <p style="margin: 0 0 5px; color: #666666; font-size: 14px;">
-                  <strong>Email:</strong> ${data.to}
-                </p>
-                <p style="margin: 0; color: #666666; font-size: 14px;">
-                  <strong>Temporary Password:</strong> <code style="background-color: #e9ecef; padding: 2px 8px; border-radius: 4px;">${data.tempPassword}</code>
+              <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
+                To get started, click the button below to set up your account and create your password.
+              </p>
+              
+              <a href="${data.onboardingLink}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Complete Account Setup →
+              </a>
+              
+              <div style="margin-top: 30px; padding: 16px; background-color: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; color: #856404; font-size: 14px;">
+                  ⏰ <strong>This link expires in 7 days.</strong> Please complete your account setup before then.
                 </p>
               </div>
-              
-              <p style="margin: 0 0 30px; color: #dc3545; font-size: 14px;">
-                ⚠️ Please change your password after your first login.
-              </p>
-              
-              <a href="${data.loginLink}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                Login to Question Hub →
-              </a>
             </td>
           </tr>
           
           <!-- Footer -->
           <tr>
             <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 12px 12px; text-align: center;">
+              <p style="margin: 0 0 10px; color: #666666; font-size: 12px;">
+                If you didn't expect this invitation, you can safely ignore this email.
+              </p>
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                This email was sent by Question Hub. If you didn't expect this invitation, please ignore this email.
+                © ${new Date().getFullYear()} Question Hub. All rights reserved.
               </p>
             </td>
           </tr>
@@ -98,18 +95,15 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
   const text = `
 Welcome to Question Hub, ${data.teacherName}!
 
-You've been invited by ${data.invitedBy} to join Question Hub as a teacher.
+${data.invitedBy} has invited you to join Question Hub as a teacher.
 
-Your temporary login credentials:
-- Email: ${data.to}
-- Temporary Password: ${data.tempPassword}
+To complete your account setup and create your password, visit:
+${data.onboardingLink}
 
-Please login at: ${data.loginLink}
-
-⚠️ Please change your password after your first login.
+⏰ This link expires in 7 days.
 
 ---
-This email was sent by Question Hub.
+If you didn't expect this invitation, you can safely ignore this email.
   `;
   
   return { subject, html, text };

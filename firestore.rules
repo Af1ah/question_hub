@@ -19,13 +19,13 @@ service cloud.firestore {
     // Check if request is from authenticated admin
     function isAdmin() {
       return isAuthenticated() && 
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     // Check if request is from authenticated teacher
     function isTeacher() {
       return isAuthenticated() && 
-             exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
     
     // Check if user owns the document

@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getDocuments, 
-  where, 
-  orderBy, 
-  Timestamp 
-} from '@/lib/firebase/firestore';
+import { adminGetDocuments } from '@/lib/firebase/admin';
 import { COLLECTIONS, DEFAULT_PAGE_SIZE } from '@/constants';
 import { Paper, PaperFilters } from '@/types';
 
 /**
  * GET /api/papers
- * Get papers with optional filters
+ * Get papers with optional filters (uses Admin SDK to bypass Firestore rules)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -34,33 +29,39 @@ export async function GET(request: NextRequest) {
         : DEFAULT_PAGE_SIZE,
     };
 
-    // Build query constraints
-    const constraints = [];
-    constraints.push(where('isPublished', '==', true));
+    // Build query using Admin SDK
+    let papers = await adminGetDocuments<Paper>(
+      COLLECTIONS.PAPERS,
+      (ref) => {
+        let query: FirebaseFirestore.Query = ref.where('isPublished', '==', true);
 
-    if (filters.subjectCode) {
-      constraints.push(where('subjectCode', '==', filters.subjectCode));
-    }
-    if (filters.departmentId) {
-      constraints.push(where('departmentId', '==', filters.departmentId));
-    }
-    if (filters.subjectTypeId) {
-      constraints.push(where('subjectTypeId', '==', filters.subjectTypeId));
-    }
-    if (filters.programType) {
-      constraints.push(where('programType', '==', filters.programType));
-    }
-    if (filters.semester) {
-      constraints.push(where('semester', '==', filters.semester));
-    }
-    if (filters.yearOfExam) {
-      constraints.push(where('yearOfExam', '==', filters.yearOfExam));
-    }
+        if (filters.subjectCode) {
+          query = query.where('subjectCode', '==', filters.subjectCode);
+        }
+        if (filters.departmentId) {
+          query = query.where('departmentId', '==', filters.departmentId);
+        }
+        if (filters.subjectTypeId) {
+          query = query.where('subjectTypeId', '==', filters.subjectTypeId);
+        }
+        if (filters.programType) {
+          query = query.where('programType', '==', filters.programType);
+        }
+        if (filters.semester) {
+          query = query.where('semester', '==', filters.semester);
+        }
+        if (filters.yearOfExam) {
+          query = query.where('yearOfExam', '==', filters.yearOfExam);
+        }
+        
+        const uploadedBy = new URL(request.url).searchParams.get('uploadedBy');
+        if (uploadedBy) {
+          query = query.where('uploadedBy', '==', uploadedBy);
+        }
 
-    constraints.push(orderBy('uploadedAt', 'desc'));
-
-    // Get papers
-    let papers = await getDocuments<Paper>(COLLECTIONS.PAPERS, constraints);
+        return query.orderBy('uploadedAt', 'desc');
+      }
+    );
 
     // Client-side text search
     if (filters.search) {
@@ -91,3 +92,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
