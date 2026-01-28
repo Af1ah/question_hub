@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Firebase Service Account
 *-firebase-adminsdk-*.json
+
+# npm lock file (using pnpm)
+package-lock.json
