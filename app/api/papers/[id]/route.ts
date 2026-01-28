@@ -17,10 +17,11 @@ import { Paper } from '@/types';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const paper = await adminGetDocument<Paper>(COLLECTIONS.PAPERS, params.id);
+    const { id } = await params;
+    const paper = await adminGetDocument<Paper>(COLLECTIONS.PAPERS, id);
     
     if (!paper) {
       return NextResponse.json(
@@ -45,7 +46,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -56,7 +57,7 @@ export async function PATCH(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const updates = await request.json();
     
     // Validate updates (prevent modifying protected fields like uploadedBy, etc if needed)
@@ -96,7 +97,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -107,7 +108,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check ownership
     const paper = await adminGetDocument<Paper>(COLLECTIONS.PAPERS, id);
