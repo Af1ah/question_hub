@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         await fileRef.makePublic();
         const fileUrl = `https://storage.googleapis.com/${bucket.name}/papers/${fullFileName}`;
         const [metadata] = await fileRef.getMetadata();
-        const fileSize = parseInt(metadata.size || '0');
+        const fileSize = typeof metadata.size === 'number' ? metadata.size : parseInt(String(metadata.size) || '0');
 
         // Create paper document
         await adminAddDocument(COLLECTIONS.PAPERS, {

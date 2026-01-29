@@ -1,4 +1,11 @@
-import { Timestamp } from 'firebase/firestore';
+import { FieldValue, Timestamp } from 'firebase/firestore';
+
+// ============================================================
+// Firestore Timestamp Types
+// ============================================================
+
+// Type for timestamp fields when writing to Firestore (accepts both Timestamp and FieldValue)
+export type FirestoreTimestampInput = Timestamp | FieldValue;
 
 // ============================================================
 // Paper Types
@@ -26,6 +33,12 @@ export interface Paper {
   downloadCount: number;      // Analytics
   isPublished: boolean;
   seoSlug: string;            // URL-friendly slug for SEO
+}
+
+// Paper type for creating/updating documents (allows FieldValue for timestamps)
+export interface PaperInput extends Omit<Paper, 'id' | 'uploadedAt' | 'updatedAt'> {
+  uploadedAt: FirestoreTimestampInput;
+  updatedAt: FirestoreTimestampInput;
 }
 
 export interface PaperFormData {

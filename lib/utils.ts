@@ -99,11 +99,21 @@ export function parseExamDate(dateStr: string): Date | null {
 
 /**
  * Format date for display
+ * Supports Date, string, Firestore Timestamp, or null
  */
-export function formatDate(date: Date | string | null): string {
+export function formatDate(date: Date | string | { toDate: () => Date } | null): string {
   if (!date) return '';
   
-  const d = typeof date === 'string' ? new Date(date) : date;
+  let d: Date;
+  if (typeof date === 'string') {
+    d = new Date(date);
+  } else if (typeof date === 'object' && 'toDate' in date && typeof date.toDate === 'function') {
+    // Handle Firestore Timestamp
+    d = date.toDate();
+  } else {
+    d = date as Date;
+  }
+  
   if (isNaN(d.getTime())) return '';
 
   return d.toLocaleDateString('en-IN', {

@@ -11,7 +11,7 @@ import {
 } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/constants';
 import { generatePaperFileName, generatePaperSlug } from '@/lib/utils';
-import { Paper } from '@/types';
+import { PaperInput } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
                  const publicUrl = `https://storage.googleapis.com/${bucket.name}/papers/${fullFileName}`;
                  
                  // Create DB Doc
-                 const paperDoc: Omit<Paper, 'id'> = {
+                 const paperDoc: PaperInput = {
                     qnNumber: qpCode,
                     fileName: fullFileName,
                     subjectCode: subjectCode.toUpperCase(),
