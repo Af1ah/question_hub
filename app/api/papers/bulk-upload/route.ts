@@ -98,16 +98,26 @@ export async function POST(request: NextRequest) {
     const subjectTypes = await adminGetDocuments<{ id: string; name: string }>(COLLECTIONS.SUBJECT_TYPES);
     const subjectTypeMap = new Map(subjectTypes.map((st) => [st.name, st.id]));
 
-    // Check existing papers to avoid duplicates using Admin SDK
-    // Note: adminGetDocuments doesn't support complex queries efficiently without helpers
-    // So we fetch all papers first? No, that's too heavy.
-    // We can use direct Firestore query via getAdminDb
+    // Get admin database reference
     const adminDb = getAdminDb();
+
+    // Pre-fetch ALL existing QP codes from database to prevent duplicates
+    // This prevents race conditions when multiple users upload simultaneously
+    const existingPapersSnapshot = await adminDb.collection(COLLECTIONS.PAPERS).select('qnNumber').get();
+    const existingQPCodes = new Set<string>();
+    existingPapersSnapshot.forEach(doc => {
+      const qnNumber = doc.data().qnNumber;
+      if (qnNumber) existingQPCodes.add(qnNumber);
+    });
+
+    // Track QP codes being processed in this batch to prevent duplicates within same CSV
+    const processedQPCodes = new Set<string>();
 
     // Process CSV rows
     const results = {
       processed: 0,
       failed: 0,
+      skipped: 0, // Track duplicates within CSV that were skipped
       errors: [] as string[],
     };
 
@@ -144,15 +154,22 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check for duplicate QP code
-        const papersRef = adminDb.collection(COLLECTIONS.PAPERS);
-        const duplicateSnapshot = await papersRef.where('qnNumber', '==', qpCode).limit(1).get();
-        
-        if (!duplicateSnapshot.empty) {
-          results.errors.push(`Duplicate QP Code: ${qpCode}`);
+        // Check for duplicate QP code in database (pre-fetched)
+        if (existingQPCodes.has(qpCode)) {
+          results.errors.push(`Duplicate QP Code (already in database): ${qpCode}`);
           results.failed++;
           continue;
         }
+
+        // Check for duplicate QP code within this CSV batch
+        if (processedQPCodes.has(qpCode)) {
+          // Track skipped duplicates from CSV
+          results.skipped++;
+          continue;
+        }
+
+        // Mark this QP code as being processed
+        processedQPCodes.add(qpCode);
 
         // Parse subject info
         const paperParts = paperName.split(' - ');
@@ -218,6 +235,9 @@ export async function POST(request: NextRequest) {
           seoSlug: generatePaperSlug(subjectName, currentYear, qpCode),
         });
 
+        // Add to existing set to prevent any duplicate from concurrent uploads
+        existingQPCodes.add(qpCode);
+        
         results.processed++;
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error';

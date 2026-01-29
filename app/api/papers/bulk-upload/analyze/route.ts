@@ -98,6 +98,9 @@ export async function POST(request: NextRequest) {
     const previewItems = [];
     let validCount = 0;
     
+    // Track QP codes seen in this CSV to detect duplicates within the file
+    const seenQPCodesInCSV = new Set<string>();
+    
     // Skip first 2 headers (as per original logic)
     for (let i = 2; i < parsed.data.length; i++) {
         const row = parsed.data[i];
@@ -122,9 +125,19 @@ export async function POST(request: NextRequest) {
             issues.push('PDF missing in ZIP');
         }
 
+        // Check for duplicate QP code in database
         if (existingQnNumbers.has(qpCode)) {
             status = 'error';
-            issues.push('Duplicate QP Code');
+            issues.push('Already exists in database');
+        }
+        
+        // Check for duplicate QP code within this CSV file
+        if (seenQPCodesInCSV.has(qpCode)) {
+            status = 'error';
+            issues.push('Duplicate in CSV (will be skipped)');
+        } else {
+            // Only add to set if not already seen
+            seenQPCodesInCSV.add(qpCode);
         }
 
         if (status === 'ready') validCount++;

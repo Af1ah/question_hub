@@ -91,6 +91,18 @@ export async function POST(request: NextRequest) {
         const typeMap = new Map<string, string>();
         typesSnap.docs.forEach(d => typeMap.set(d.data().name, d.id));
 
+        // 3.5 Pre-fetch ALL existing QP codes to prevent duplicates (single query)
+        const existingPapersSnap = await adminDb.collection(COLLECTIONS.PAPERS).select('qnNumber').get();
+        const existingQPCodes = new Set<string>();
+        existingPapersSnap.forEach(doc => {
+            const qn = doc.data().qnNumber;
+            if (qn) existingQPCodes.add(qn);
+        });
+        
+        // Track QP codes processed in this batch (to handle CSV duplicates)
+        const processedQPCodes = new Set<string>();
+        let skippedCount = 0;
+
         // 4. Process Loop
         let processedCount = 0;
         let successCount = 0;
@@ -118,6 +130,24 @@ export async function POST(request: NextRequest) {
                  continue; 
              }
 
+             // Check for duplicate QP code in database (using pre-fetched set)
+             if (existingQPCodes.has(qpCode)) {
+                 sendEvent({ type: 'log', message: `Skipping duplicate QP ${qpCode} (already in database)` });
+                 failCount++;
+                 processedCount++;
+                 continue;
+             }
+             
+             // Check for duplicate QP code within this CSV batch
+             if (processedQPCodes.has(qpCode)) {
+                 sendEvent({ type: 'log', message: `Skipping duplicate QP ${qpCode} (duplicate in CSV)` });
+                 skippedCount++;
+                 continue;
+             }
+             
+             // Mark as being processed
+             processedQPCodes.add(qpCode);
+
              // Send progress
              sendEvent({ 
                  type: 'progress', 
@@ -127,17 +157,6 @@ export async function POST(request: NextRequest) {
              });
 
              try {
-                 // Check duplicate (Final safety check)
-                 const dupCheck = await adminDb.collection(COLLECTIONS.PAPERS)
-                    .where('qnNumber', '==', qpCode).limit(1).get();
-                 
-                 if (!dupCheck.empty) {
-                     sendEvent({ type: 'log', message: `Skipping duplicate QP ${qpCode}` });
-                     failCount++;
-                     processedCount++;
-                     continue;
-                 }
-
                  // Parse Metadata
                  let currentDate = '';
                  let currentYear = new Date().getFullYear();
@@ -220,6 +239,9 @@ export async function POST(request: NextRequest) {
 
                  await adminAddDocument(COLLECTIONS.PAPERS, paperDoc);
                  
+                 // Add to existing set to prevent duplicates within this batch
+                 existingQPCodes.add(qpCode);
+                 
                  successCount++;
              } catch (err) {
                  console.error(`Error processing ${qpCode}:`, err);
@@ -237,7 +259,7 @@ export async function POST(request: NextRequest) {
 
         sendEvent({ 
             type: 'done', 
-            stats: { processed: processedCount, success: successCount, failed: failCount } 
+            stats: { processed: processedCount, success: successCount, failed: failCount, skipped: skippedCount } 
         });
 
       } catch (error) {

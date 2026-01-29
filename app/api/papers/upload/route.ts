@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { addDocument, Timestamp, where, getDocuments } from '@/lib/firebase/firestore';
-import { uploadPaperFile } from '@/lib/firebase/storage';
+import { 
+  adminAddDocument, 
+  adminGetDocuments, 
+  getAdminStorage,
+  getAdminDb,
+  FieldValue 
+} from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/constants';
 import { generatePaperFileName, generatePaperSlug } from '@/lib/utils';
 
 /**
  * POST /api/papers/upload
- * Upload a new paper (requires authentication)
+ * Upload a new paper (requires authentication - teacher or admin)
+ * Uses Admin SDK to bypass security rules (auth is checked via session)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +24,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    // Only allow teachers and admins
+    if (session.user.role !== 'teacher' && session.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Only teachers and admins can upload papers' },
+        { status: 403 }
       );
     }
 
@@ -43,12 +57,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for duplicate QN number
-    const existingPapers = await getDocuments(COLLECTIONS.PAPERS, [
-      where('qnNumber', '==', qnNumber),
-    ]);
+    const adminDb = getAdminDb();
 
-    if (existingPapers.length > 0) {
+    // Check for duplicate QN number using Admin SDK
+    const existingPapersSnapshot = await adminDb
+      .collection(COLLECTIONS.PAPERS)
+      .where('qnNumber', '==', qnNumber)
+      .limit(1)
+      .get();
+
+    if (!existingPapersSnapshot.empty) {
       return NextResponse.json(
         { error: 'A paper with this question number already exists' },
         { status: 409 }
@@ -56,22 +74,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate file name and slug
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
     const fileName = generatePaperFileName(subjectCode, yearOfExam, qnNumber);
+    const fullFileName = `${fileName}.${extension}`;
     const seoSlug = generatePaperSlug(subjectName, yearOfExam, qnNumber);
 
-    // Upload file to storage
-    const uploadResult = await uploadPaperFile(file, fileName);
+    // Upload file to storage using Admin SDK
+    const bucket = getAdminStorage().bucket();
+    const fileRef = bucket.file(`papers/${fullFileName}`);
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await fileRef.save(buffer, {
+      metadata: {
+        contentType: file.type || 'application/pdf',
+      },
+    });
+    
+    // Make file public
+    await fileRef.makePublic();
+    const fileUrl = `https://storage.googleapis.com/${bucket.name}/papers/${fullFileName}`;
 
-    // Get or create subject
+    // Get or create subject using Admin SDK
     let subjectId = '';
-    const existingSubjects = await getDocuments(COLLECTIONS.SUBJECTS, [
-      where('code', '==', subjectCode.toUpperCase()),
-    ]);
+    const existingSubjectsSnapshot = await adminDb
+      .collection(COLLECTIONS.SUBJECTS)
+      .where('code', '==', subjectCode.toUpperCase())
+      .limit(1)
+      .get();
 
-    if (existingSubjects.length > 0) {
-      subjectId = (existingSubjects[0] as { id: string }).id;
+    if (!existingSubjectsSnapshot.empty) {
+      subjectId = existingSubjectsSnapshot.docs[0].id;
     } else {
-      subjectId = await addDocument(COLLECTIONS.SUBJECTS, {
+      subjectId = await adminAddDocument(COLLECTIONS.SUBJECTS, {
         code: subjectCode.toUpperCase(),
         name: subjectName,
         departmentId,
@@ -79,11 +113,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create paper document
-    const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    // Create paper document using Admin SDK
     const paperData = {
       qnNumber,
-      fileName: `${fileName}.${extension}`,
+      fileName: fullFileName,
       subjectCode: subjectCode.toUpperCase(),
       subjectName,
       subjectId,
@@ -93,17 +126,17 @@ export async function POST(request: NextRequest) {
       semester,
       yearOfExam,
       description,
-      fileUrl: uploadResult.url,
-      fileSize: uploadResult.size,
+      fileUrl,
+      fileSize: buffer.length,
       uploadedBy: session.user.id,
-      uploadedAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      uploadedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       downloadCount: 0,
       isPublished: true,
       seoSlug,
     };
 
-    const paperId = await addDocument(COLLECTIONS.PAPERS, paperData);
+    const paperId = await adminAddDocument(COLLECTIONS.PAPERS, paperData);
 
     return NextResponse.json({
       success: true,
