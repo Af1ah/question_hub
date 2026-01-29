@@ -99,19 +99,28 @@ export function parseExamDate(dateStr: string): Date | null {
 
 /**
  * Format date for display
- * Supports Date, string, Firestore Timestamp, or null
+ * Supports Date, string, Firestore Timestamp (with toDate method or serialized with seconds/nanoseconds), or null
  */
-export function formatDate(date: Date | string | { toDate: () => Date } | null): string {
+export function formatDate(date: Date | string | { toDate?: () => Date; seconds?: number; nanoseconds?: number } | null | undefined): string {
   if (!date) return '';
   
   let d: Date;
   if (typeof date === 'string') {
     d = new Date(date);
-  } else if (typeof date === 'object' && 'toDate' in date && typeof date.toDate === 'function') {
-    // Handle Firestore Timestamp
-    d = date.toDate();
+  } else if (date instanceof Date) {
+    d = date;
+  } else if (typeof date === 'object') {
+    // Handle Firestore Timestamp - check for toDate method first
+    if ('toDate' in date && typeof date.toDate === 'function') {
+      d = date.toDate();
+    } else if ('seconds' in date && typeof date.seconds === 'number') {
+      // Handle serialized Timestamp (plain object with seconds/nanoseconds)
+      d = new Date(date.seconds * 1000);
+    } else {
+      return '';
+    }
   } else {
-    d = date as Date;
+    return '';
   }
   
   if (isNaN(d.getTime())) return '';
