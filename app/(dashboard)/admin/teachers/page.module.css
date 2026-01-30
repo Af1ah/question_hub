@@ -296,3 +296,87 @@
 .submitButton:disabled {
     opacity: 0.7;
 }
+
+/* Warning box for email failure */
+.warningBox {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    color: #b45309;
+}
+
+.warningBox svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.warningBox strong {
+    display: block;
+    margin-bottom: var(--space-1);
+}
+
+.warningBox p {
+    margin: 0;
+    font-size: var(--text-sm);
+}
+
+/* Copy link wrapper */
+.copyLinkWrapper {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.linkInput {
+    flex: 1;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: monospace;
+}
+
+.linkInput:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.copyButton {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background-color: var(--color-primary);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.copyButton:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.copyButton.copied {
+    background-color: var(--color-success);
+}
+
+.linkHint {
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+}
+
+.linkHint strong {
+    color: var(--text-primary);
+}

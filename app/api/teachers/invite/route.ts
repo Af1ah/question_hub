@@ -100,8 +100,9 @@ export async function POST(request: NextRequest) {
       departmentId: departmentId || '',
       isActive: false,
       emailSent: emailResult.success,
-      // Only include onboarding link in dev for testing
-      ...(process.env.NODE_ENV === 'development' && { onboardingLink }),
+      emailError: emailResult.success ? undefined : emailResult.error,
+      // Include onboarding link so admin can share manually if email fails
+      onboardingLink,
     });
   } catch (error) {
     console.error('Error inviting teacher:', error);

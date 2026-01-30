@@ -52,54 +52,72 @@ export async function PATCH(
     
     // Run as a transaction to ensure data integrity
     await db.runTransaction(async (transaction) => {
-      // 1. Check where the user currently is
+      // 1. Check where the user currently is (check all possible collections)
+      const userRef = db.collection(COLLECTIONS.USERS).doc(id);
       const teacherRef = db.collection(COLLECTIONS.TEACHERS).doc(id);
       const adminRef = db.collection(COLLECTIONS.ADMINS).doc(id);
       
+      const userDoc = await transaction.get(userRef);
       const teacherDoc = await transaction.get(teacherRef);
       const adminDoc = await transaction.get(adminRef);
 
-      if (!teacherDoc.exists && !adminDoc.exists) {
+      // User can be in 'users' collection OR in 'teachers'/'admins' collections
+      if (!userDoc.exists && !teacherDoc.exists && !adminDoc.exists) {
         throw new Error('User not found');
       }
 
-      if (teacherDoc.exists && newRole === 'teacher') {
-        throw new Error('User is already a teacher');
+      // Get current role
+      let currentRole: string | undefined;
+      if (userDoc.exists) {
+        currentRole = userDoc.data()?.role;
+      } else if (teacherDoc.exists) {
+        currentRole = 'teacher';
+      } else if (adminDoc.exists) {
+        currentRole = 'admin';
       }
 
-      if (adminDoc.exists && newRole === 'admin') {
-        throw new Error('User is already an admin');
+      if (currentRole === newRole) {
+        throw new Error(`User is already a ${newRole}`);
       }
 
       // 2. Prepare data for migration
       let userData: any = {};
       
-      if (teacherDoc.exists) {
+      if (userDoc.exists) {
+        userData = userDoc.data();
+      } else if (teacherDoc.exists) {
         userData = teacherDoc.data();
-        // Remove teacher-specific fields if necessary or keep them
       } else {
         userData = adminDoc.data();
       }
 
-      // 3. Move to new collection
-      if (newRole === 'admin') {
-        // Teacher -> Admin
-        transaction.set(adminRef, {
-          ...userData,
-          role: 'admin', // Ensure role field if used
+      // 3. Update the user's role
+      // If user is in the 'users' collection, just update the role there
+      if (userDoc.exists) {
+        transaction.update(userRef, {
+          role: newRole,
           updatedAt: new Date(),
         });
-        transaction.delete(teacherRef);
       } else {
-         // Admin -> Teacher
-         transaction.set(teacherRef, {
-          ...userData,
-          role: 'teacher',
-          // Ensure teacher specific fields defaults if missing
-          departmentId: userData.departmentId || '',
-          updatedAt: new Date(),
-         });
-         transaction.delete(adminRef);
+        // If user is in separate collections (teachers/admins), move between them
+        if (newRole === 'admin') {
+          // Teacher -> Admin
+          transaction.set(adminRef, {
+            ...userData,
+            role: 'admin',
+            updatedAt: new Date(),
+          });
+          transaction.delete(teacherRef);
+        } else {
+          // Admin -> Teacher
+          transaction.set(teacherRef, {
+            ...userData,
+            role: 'teacher',
+            departmentId: userData.departmentId || '',
+            updatedAt: new Date(),
+          });
+          transaction.delete(adminRef);
+        }
       }
       
       // 4. Update Custom Claims (if using Firebase Auth Custom Claims)

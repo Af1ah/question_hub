@@ -6,6 +6,12 @@ import { TeacherInviteEmail } from '@/types';
 // ============================================================
 
 const createTransporter = () => {
+  // Check if SMTP credentials are configured
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.error('❌ SMTP credentials not configured');
+    throw new Error('Email configuration incomplete: SMTP_USER and SMTP_PASS are required');
+  }
+
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -14,6 +20,10 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Timeout settings for better reliability
+    connectionTimeout: 10000, // 10 seconds to establish connection
+    greetingTimeout: 10000,   // 10 seconds for greeting
+    socketTimeout: 30000,     // 30 seconds for socket operations
   });
 };
 
@@ -114,30 +124,43 @@ If you didn't expect this invitation, you can safely ignore this email.
 // ============================================================
 
 /**
- * Send teacher invitation email
+ * Send teacher invitation email with retry logic
  */
 export async function sendTeacherInviteEmail(data: TeacherInviteEmail): Promise<{ success: boolean; error?: string }> {
-  try {
-    const transporter = createTransporter();
-    const { subject, html, text } = teacherInviteTemplate(data);
+  const maxRetries = 2;
+  let lastError: Error | null = null;
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: data.to,
-      subject,
-      html,
-      text,
-    });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const transporter = createTransporter();
+      const { subject, html, text } = teacherInviteTemplate(data);
 
-    console.log(`✅ Invitation email sent to ${data.to}`);
-    return { success: true };
-  } catch (error) {
-    console.error('❌ Error sending email:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to send email' 
-    };
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: data.to,
+        subject,
+        html,
+        text,
+      });
+
+      console.log(`✅ Invitation email sent to ${data.to}`);
+      return { success: true };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      console.error(`❌ Email attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+      
+      // Wait before retry (exponential backoff)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
   }
+
+  console.error('❌ All email attempts failed:', lastError?.message);
+  return { 
+    success: false, 
+    error: lastError?.message || 'Failed to send email after multiple attempts' 
+  };
 }
 
 /**

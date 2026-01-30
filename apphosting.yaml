@@ -59,7 +59,7 @@ env:
 
   # NextAuth
   - variable: NEXTAUTH_URL
-    value: https://qnhub--sample-firebase-ai-3e3e5.firebaseapp.com
+    value: https://qnhub.aflahdev.in
     availability:
       - RUNTIME
 

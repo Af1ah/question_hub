@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, Mail, Check, X, User as UserIcon, Trash2, Shield, GraduationCap, ArrowRightLeft } from 'lucide-react';
+import { UserPlus, X, User as UserIcon, Trash2, Shield, GraduationCap, ArrowRightLeft, Copy, CheckCircle, AlertCircle } from 'lucide-react';
 import { User, Department } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,6 +23,9 @@ export default function AdminUsersPage() {
     const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState('');
     const [inviteSuccess, setInviteSuccess] = useState('');
+    const [onboardingLink, setOnboardingLink] = useState('');
+    const [emailFailed, setEmailFailed] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -49,6 +52,9 @@ export default function AdminUsersPage() {
         e.preventDefault();
         setInviteError('');
         setInviteSuccess('');
+        setOnboardingLink('');
+        setEmailFailed(false);
+        setLinkCopied(false);
         setInviting(true);
 
         try {
@@ -63,22 +69,60 @@ export default function AdminUsersPage() {
             });
 
             if (res.ok) {
-                const newUser = await res.json();
-                setUsers([...users, newUser]);
-                setInviteSuccess('Invitation sent successfully!');
-                setInviteEmail('');
-                setInviteName('');
-                setInviteDepartment('');
-                setTimeout(() => setShowInviteModal(false), 2000);
+                const data = await res.json();
+                setUsers([...users, data]);
+                
+                if (data.emailSent) {
+                    setInviteSuccess(`Invitation sent successfully to ${inviteEmail}!`);
+                    setInviteEmail('');
+                    setInviteName('');
+                    setInviteDepartment('');
+                    setTimeout(() => setShowInviteModal(false), 2000);
+                } else {
+                    // Email failed but teacher was created
+                    setEmailFailed(true);
+                    setOnboardingLink(data.onboardingLink);
+                    setInviteError(`Teacher created, but email failed to send. Please share the link manually.`);
+                }
             } else {
                 const data = await res.json();
                 setInviteError(data.error || 'Failed to invite user');
             }
-        } catch (error) {
+        } catch {
             setInviteError('An unexpected error occurred');
         } finally {
             setInviting(false);
         }
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(onboardingLink);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 3000);
+        } catch {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = onboardingLink;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 3000);
+        }
+    };
+
+    const resetInviteForm = () => {
+        setShowInviteModal(false);
+        setInviteEmail('');
+        setInviteName('');
+        setInviteDepartment('');
+        setInviteError('');
+        setInviteSuccess('');
+        setOnboardingLink('');
+        setEmailFailed(false);
+        setLinkCopied(false);
     };
 
     const handleDeleteUser = async (userId: string) => {
@@ -143,7 +187,7 @@ export default function AdminUsersPage() {
                 <div className={styles.headerActions}>
                     <select
                         value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value as any)}
+                        onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'teacher')}
                         className={styles.roleFilter}
                     >
                         <option value="all">All Roles</option>
@@ -235,69 +279,116 @@ export default function AdminUsersPage() {
                     <div className={styles.modalContent}>
                         <div className={styles.modalHeader}>
                             <h2>Invite Teacher</h2>
-                            <button onClick={() => setShowInviteModal(false)} className={styles.closeButton}>
+                            <button onClick={resetInviteForm} className={styles.closeButton}>
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleInvite} className={styles.modalForm}>
-                            {inviteError && <div className={styles.error}>{inviteError}</div>}
-                            {inviteSuccess && <div className={styles.success}>{inviteSuccess}</div>}
+                        {emailFailed && onboardingLink ? (
+                            // Show copy link UI when email fails
+                            <div className={styles.modalForm}>
+                                <div className={styles.warningBox}>
+                                    <AlertCircle size={20} />
+                                    <div>
+                                        <strong>Email delivery failed</strong>
+                                        <p>The teacher account was created, but we couldn&apos;t send the invitation email. Please share the onboarding link manually.</p>
+                                    </div>
+                                </div>
 
-                            <div className={styles.field}>
-                                <label>Full Name</label>
-                                <input
-                                    type="text"
-                                    value={inviteName}
-                                    onChange={(e) => setInviteName(e.target.value)}
-                                    placeholder="Teacher's full name"
-                                    required
-                                />
-                            </div>
+                                <div className={styles.field}>
+                                    <label>Onboarding Link</label>
+                                    <div className={styles.copyLinkWrapper}>
+                                        <input
+                                            type="text"
+                                            value={onboardingLink}
+                                            readOnly
+                                            className={styles.linkInput}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyLink}
+                                            className={`${styles.copyButton} ${linkCopied ? styles.copied : ''}`}
+                                        >
+                                            {linkCopied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                                            {linkCopied ? 'Copied!' : 'Copy'}
+                                        </button>
+                                    </div>
+                                    <p className={styles.linkHint}>
+                                        Share this link with <strong>{inviteName || 'the teacher'}</strong> ({inviteEmail}). The link expires in 7 days.
+                                    </p>
+                                </div>
 
-                            <div className={styles.field}>
-                                <label>Email Address</label>
-                                <input
-                                    type="email"
-                                    value={inviteEmail}
-                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                    placeholder="teacher@example.com"
-                                    required
-                                />
+                                <div className={styles.modalActions}>
+                                    <button
+                                        type="button"
+                                        onClick={resetInviteForm}
+                                        className={styles.submitButton}
+                                    >
+                                        Done
+                                    </button>
+                                </div>
                             </div>
+                        ) : (
+                            // Normal invite form
+                            <form onSubmit={handleInvite} className={styles.modalForm}>
+                                {inviteError && <div className={styles.error}>{inviteError}</div>}
+                                {inviteSuccess && <div className={styles.success}>{inviteSuccess}</div>}
 
-                            <div className={styles.field}>
-                                <label>Department (Optional)</label>
-                                <select
-                                    value={inviteDepartment}
-                                    onChange={(e) => setInviteDepartment(e.target.value)}
-                                >
-                                    <option value="">Select department</option>
-                                    {departments.map((dept) => (
-                                        <option key={dept.id} value={dept.id}>
-                                            {dept.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                <div className={styles.field}>
+                                    <label>Full Name</label>
+                                    <input
+                                        type="text"
+                                        value={inviteName}
+                                        onChange={(e) => setInviteName(e.target.value)}
+                                        placeholder="Teacher's full name"
+                                        required
+                                    />
+                                </div>
 
-                            <div className={styles.modalActions}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowInviteModal(false)}
-                                    className={styles.cancelButton}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={inviting}
-                                    className={styles.submitButton}
-                                >
-                                    {inviting ? 'Sending...' : 'Send Invitation'}
-                                </button>
-                            </div>
-                        </form>
+                                <div className={styles.field}>
+                                    <label>Email Address</label>
+                                    <input
+                                        type="email"
+                                        value={inviteEmail}
+                                        onChange={(e) => setInviteEmail(e.target.value)}
+                                        placeholder="teacher@example.com"
+                                        required
+                                    />
+                                </div>
+
+                                <div className={styles.field}>
+                                    <label>Department (Optional)</label>
+                                    <select
+                                        value={inviteDepartment}
+                                        onChange={(e) => setInviteDepartment(e.target.value)}
+                                    >
+                                        <option value="">Select department</option>
+                                        {departments.map((dept) => (
+                                            <option key={dept.id} value={dept.id}>
+                                                {dept.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className={styles.modalActions}>
+                                    <button
+                                        type="button"
+                                        onClick={resetInviteForm}
+                                        className={styles.cancelButton}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={inviting}
+                                        className={styles.submitButton}
+                                    >
+                                        {inviting ? 'Sending...' : 'Send Invitation'}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 </div>
             )}
