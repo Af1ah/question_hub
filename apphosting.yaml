@@ -42,7 +42,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_SITE_URL
-    value: https://qnhub--sample-firebase-ai-3e3e5.firebaseapp.com
+    value: https://qnhub.aflahdev.in
     availability:
       - BUILD
       - RUNTIME
