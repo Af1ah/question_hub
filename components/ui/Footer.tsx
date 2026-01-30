@@ -12,7 +12,6 @@ export function Footer() {
                     {/* Brand */}
                     <div className={styles.brand}>
                         <Link href="/" className={styles.logo}>
-                            <span className={styles.logoIcon}>📚</span>
                             <span className={styles.logoText}>{SITE_NAME}</span>
                         </Link>
                         <p className={styles.tagline}>
@@ -48,7 +47,7 @@ export function Footer() {
                         © {currentYear} {SITE_NAME}. All rights reserved.
                     </p>
                     <p className={styles.credits}>
-                        Made with ❤️ for students
+                        Made with love for students
                     </p>
                 </div>
             </div>

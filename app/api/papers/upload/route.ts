@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { 
   adminAddDocument, 
   adminGetDocuments, 
-  getAdminStorage,
+  getStorageBucket,
   getAdminDb,
   FieldValue 
 } from '@/lib/firebase/admin';
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const seoSlug = generatePaperSlug(subjectName, yearOfExam, qnNumber);
 
     // Upload file to storage using Admin SDK
-    const bucket = getAdminStorage().bucket();
+    const bucket = getStorageBucket();
     const fileRef = bucket.file(`papers/${fullFileName}`);
     
     const buffer = Buffer.from(await file.arrayBuffer());

@@ -6,7 +6,7 @@ import Papa from 'papaparse';
 import { 
   adminAddDocument, 
   adminGetDocuments, 
-  getAdminStorage, 
+  getStorageBucket, 
   getAdminDb,
   FieldValue,
   Timestamp 
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
         const fileName = generatePaperFileName(subjectCode, currentYear, qpCode);
         const fullFileName = `${fileName}.pdf`;
         
-        const bucket = getAdminStorage().bucket();
+        const bucket = getStorageBucket();
         const fileRef = bucket.file(`papers/${fullFileName}`);
         
         await fileRef.save(pdfBuffer, {

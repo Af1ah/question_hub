@@ -5,7 +5,7 @@
 
 /* Sidebar - Collapsible */
 .sidebar {
-    width: 72px;
+    width: 64px;
     background-color: var(--color-white);
     border-right: 1px solid var(--border-light);
     box-shadow: var(--shadow-md);
@@ -16,7 +16,7 @@
     left: 0;
     bottom: 0;
     z-index: var(--z-sticky);
-    transition: width var(--transition-normal);
+    transition: all var(--transition-normal);
     overflow: hidden;
 }
 
@@ -205,25 +205,42 @@
 /* Main Content */
 .main {
     flex: 1;
-    margin-left: 72px;
+    margin-left: 64px;
     background-color: var(--bg-secondary);
     min-height: 100vh;
     transition: margin-left var(--transition-normal);
 }
 
-/* Mobile */
+/* Mobile - show icon-only sidebar */
 @media (max-width: 768px) {
     .sidebar {
-        width: 0;
-        transform: translateX(-100%);
+        width: 56px;
     }
 
-    .sidebar.sidebarExpanded {
-        width: 260px;
-        transform: translateX(0);
+    .sidebar:hover {
+        width: 56px;
+    }
+
+    .sidebar .sidebarTitle,
+    .sidebar .navItem span,
+    .sidebar .userInfo,
+    .sidebar .logoutButton span {
+        display: none;
     }
 
     .main {
-        margin-left: 0;
+        margin-left: 56px;
+    }
+
+    .sidebarHeader {
+        justify-content: center;
+    }
+
+    .navItem {
+        justify-content: center;
+    }
+
+    .logoutButton {
+        justify-content: center;
     }
 }

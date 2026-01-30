@@ -1,7 +1,7 @@
-# Security Audit - Question Hub
+# Security Audit - QnHub
 
 ## Overview
-Security review of the Question Hub application.
+Security review of the QnHub application.
 
 ---
 

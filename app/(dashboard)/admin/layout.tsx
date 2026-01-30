@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Upload, FileText, LogOut, Home, Building2, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Users, Upload, FileText, LogOut, Home, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROUTES } from '@/constants';
 import styles from './layout.module.css';
@@ -61,7 +61,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
                 <div className={styles.sidebarHeader}>
                     <div className={styles.sidebarLogo}>Q</div>
-                    {isExpanded && <h2 className={styles.sidebarTitle}>Admin Panel</h2>}
+                    <h2 className={styles.sidebarTitle}>Admin Panel</h2>
                 </div>
 
                 <nav className={styles.nav}>
@@ -70,25 +70,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             key={item.href}
                             href={item.href}
                             className={`${styles.navItem} ${isActiveRoute(item.href) ? styles.navItemActive : ''}`}
-                            title={!isExpanded ? item.label : ''}
+                            title={item.label}
                         >
                             <item.icon size={20} />
-                            {isExpanded && <span>{item.label}</span>}
+                            <span>{item.label}</span>
                         </Link>
                     ))}
                 </nav>
 
                 <div className={styles.sidebarFooter}>
+                    <div className={styles.userInfo}>
+                        <span className={styles.userName}>{user?.name}</span>
+                        <span className={styles.userRole}>Administrator</span>
+                    </div>
                     <button onClick={handleLogout} className={styles.logoutButton} title="Logout">
                         <LogOut size={18} />
-                        {isExpanded && <span>Logout</span>}
+                        <span>Logout</span>
                     </button>
-                    {isExpanded && (
-                        <div className={styles.userInfo}>
-                            <span className={styles.userName}>{user?.name}</span>
-                            <span className={styles.userRole}>Administrator</span>
-                        </div>
-                    )}
                 </div>
             </aside>
 

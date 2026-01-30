@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { 
   getAdminDb, 
-  getAdminStorage, 
+  getStorageBucket, 
   adminGetDocument, 
   adminUpdateDocument, 
   adminDeleteDocument 
@@ -129,7 +129,7 @@ export async function DELETE(
     // Delete file from Storage
     if (paper.fileName) {
       try {
-        const bucket = getAdminStorage().bucket();
+        const bucket = getStorageBucket();
         // Handle potential path variations (root or papers/)
         // Our bulk upload puts in papers/, client upload puts in papers/
         // fileName usually includes the path if we stored it that way?

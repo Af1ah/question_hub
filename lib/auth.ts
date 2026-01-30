@@ -263,36 +263,34 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     // JWT callback - runs on sign in and when session is accessed
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in
+      // Initial sign in - set user data
       if (user) {
         console.log('[Auth] JWT Callback: Initial Sign In', user.id);
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
-
-        // Generate access token for API calls
         token.accessToken = generateAccessToken();
-        
-        // Mint Firebase Custom Token
-        try {
-            console.log('[Auth] Minting Firebase Custom Token for:', user.id);
-            // Ensure admin app is initialized
-            getAdminApp();
-            const additionalClaims = {
-                role: user.role
-            };
-            const customToken = await getAuth().createCustomToken(user.id, additionalClaims);
-            token.firebaseToken = customToken;
-            console.log('[Auth] Custom Token Data (Masked):', customToken.substring(0, 10) + '...');
-        } catch (error) {
-            console.error('[Auth] Error minting custom token:', error);
-        }
       }
 
       // Token refresh - update session if triggered
       if (trigger === 'update' && session) {
         token.name = session.name ?? token.name;
+      }
+
+      // Always regenerate Firebase custom token (they expire after 1 hour)
+      // This runs on every session access to ensure we have a fresh token
+      if (token.id && token.role) {
+        try {
+          getAdminApp();
+          const additionalClaims = { role: token.role };
+          const customToken = await getAuth().createCustomToken(token.id, additionalClaims);
+          token.firebaseToken = customToken;
+        } catch (error) {
+          console.error('[Auth] Error minting custom token:', error);
+          // Clear the token on error to force re-auth
+          token.firebaseToken = undefined;
+        }
       }
       
       return token;

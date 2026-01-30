@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import JSZip from 'jszip';
 import Papa from 'papaparse';
-import { getAdminStorage, getAdminDb, adminGetDocuments } from '@/lib/firebase/admin';
+import { getStorageBucket, getAdminDb, adminGetDocuments } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/constants';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Download ZIP from Storage
-    const bucket = getAdminStorage().bucket();
+    const bucket = getStorageBucket();
     // Assuming filePath is relative to bucket root, e.g., "temp/..."
     const file = bucket.file(filePath);
     

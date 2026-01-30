@@ -32,7 +32,7 @@ const createTransporter = () => {
 // ============================================================
 
 const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; html: string; text: string } => {
-  const subject = `You're invited to join Question Hub`;
+  const subject = `You're invited to join QnHub`;
   
   const html = `
 <!DOCTYPE html>
@@ -40,7 +40,8 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Question Hub</title>
+  <title>Welcome to QnHub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nova+Round&display=swap" rel="stylesheet">
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -50,9 +51,9 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px 12px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">
-                📚 Question Hub
-              </h1>
+              <span style="color: #ffffff; font-size: 28px; font-weight: 400; font-family: 'Nova Round', sans-serif;">
+                QnHub
+              </span>
             </td>
           </tr>
           
@@ -60,11 +61,11 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
           <tr>
             <td style="padding: 40px;">
               <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
-                Welcome, ${data.teacherName}! 👋
+                Welcome, ${data.teacherName}!
               </h2>
               
               <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                <strong>${data.invitedBy}</strong> has invited you to join Question Hub as a teacher. You'll be able to upload and manage question papers for students.
+                <strong>${data.invitedBy}</strong> has invited you to join QnHub as a teacher. You'll be able to upload and manage question papers for students.
               </p>
               
               <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
@@ -72,12 +73,12 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
               </p>
               
               <a href="${data.onboardingLink}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                Complete Account Setup →
+                Complete Account Setup
               </a>
               
               <div style="margin-top: 30px; padding: 16px; background-color: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
                 <p style="margin: 0; color: #856404; font-size: 14px;">
-                  ⏰ <strong>This link expires in 7 days.</strong> Please complete your account setup before then.
+                  <strong>This link expires in 7 days.</strong> Please complete your account setup before then.
                 </p>
               </div>
             </td>
@@ -90,7 +91,7 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
                 If you didn't expect this invitation, you can safely ignore this email.
               </p>
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                © ${new Date().getFullYear()} Question Hub. All rights reserved.
+                © ${new Date().getFullYear()} QnHub. All rights reserved.
               </p>
             </td>
           </tr>
@@ -103,14 +104,14 @@ const teacherInviteTemplate = (data: TeacherInviteEmail): { subject: string; htm
   `;
   
   const text = `
-Welcome to Question Hub, ${data.teacherName}!
+Welcome to QnHub, ${data.teacherName}!
 
-${data.invitedBy} has invited you to join Question Hub as a teacher.
+${data.invitedBy} has invited you to join QnHub as a teacher.
 
 To complete your account setup and create your password, visit:
 ${data.onboardingLink}
 
-⏰ This link expires in 7 days.
+This link expires in 7 days.
 
 ---
 If you didn't expect this invitation, you can safely ignore this email.

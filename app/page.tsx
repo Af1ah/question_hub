@@ -101,24 +101,6 @@ export default function HomePage() {
               <SlidersHorizontal size={20} />
             </button>
           </div>
-
-          {/* Quick Stats */}
-          <div className={styles.stats}>
-            <div className={styles.statItem}>
-              <span className={styles.statNumber}>{papers.length}+</span>
-              <span className={styles.statLabel}>Papers</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.statItem}>
-              <span className={styles.statNumber}>{departments.length}</span>
-              <span className={styles.statLabel}>Departments</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.statItem}>
-              <span className={styles.statNumber}>8</span>
-              <span className={styles.statLabel}>Semesters</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -126,12 +108,7 @@ export default function HomePage() {
       <section className={styles.section}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Recent Papers</h2>
-              <p className={styles.sectionSubtitle}>
-                {papers.length} papers found
-              </p>
-            </div>
+            <h2 className={styles.sectionTitle}>Recent Papers</h2>
             <Link href={ROUTES.PAPERS} className={styles.viewAllLink}>
               View All Papers
               <ArrowRight size={16} />
@@ -143,9 +120,9 @@ export default function HomePage() {
               <LoadingSpinner size="lg" />
             </div>
           ) : papers.length > 0 ? (
-            <div className={styles.papersGrid}>
+            <div className={styles.recentPapersList}>
               {papers.map((paper) => (
-                <PaperCard key={paper.id} paper={paper} />
+                <PaperCard key={paper.id} paper={paper} variant="compact" />
               ))}
             </div>
           ) : (

@@ -1,19 +1,55 @@
 .header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-sticky);
+    background-color: transparent;
+}
+
+/* Variant for light background pages */
+.headerLight {
     position: sticky;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: var(--z-sticky);
-    background-color: var(--color-primary);
-    box-shadow: var(--shadow-md);
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.headerLight .logo {
+    color: var(--text-primary);
+}
+
+.headerLight .mobileSearchButton,
+.headerLight .menuToggle {
+    background: var(--color-gray-100);
+    color: var(--text-primary);
+}
+
+.headerLight .mobileSearchButton:hover,
+.headerLight .menuToggle:hover {
+    background-color: var(--color-gray-200);
 }
 
 .container {
     max-width: var(--container-xl);
     margin: 0 auto;
-    padding: var(--space-4) var(--space-6);
+    padding: var(--space-4) var(--space-4);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-4);
     position: relative;
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding: var(--space-4) var(--space-6);
+    }
 }
 
 /* Logo */
@@ -23,23 +59,190 @@
     gap: var(--space-2);
     text-decoration: none;
     color: var(--text-inverse);
-    font-weight: var(--font-bold);
-    font-size: var(--text-xl);
-}
-
-.logoIcon {
-    font-size: var(--text-2xl);
+    flex-shrink: 0;
 }
 
 .logoText {
-    letter-spacing: -0.5px;
+    font-family: var(--font-brand), sans-serif;
+    font-size: var(--text-xl);
+    font-weight: 900;
+    letter-spacing: 0.5px;
+}
+
+@media (min-width: 768px) {
+    .logoText {
+        font-size: var(--text-xl);
+    }
+}
+
+/* Search Form */
+.searchForm {
+    display: none;
+    flex: 1;
+    max-width: 400px;
+}
+
+@media (min-width: 768px) {
+    .searchForm {
+        display: block;
+    }
+}
+
+.searchInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.searchIcon {
+    position: absolute;
+    left: var(--space-3);
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.searchInput {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    padding-left: calc(var(--space-3) + 18px + var(--space-2));
+    font-size: var(--text-sm);
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background-color: var(--bg-primary);
+    box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.1);
+}
+
+.searchInput::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Mobile Search Button */
+.mobileSearchButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-inverse);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+}
+
+.mobileSearchButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+@media (min-width: 768px) {
+    .mobileSearchButton {
+        display: none;
+    }
+}
+
+/* Mobile Search Overlay */
+.mobileSearchOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.98);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-4);
+    z-index: 10;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.mobileSearchForm {
+    width: 100%;
+}
+
+.mobileSearchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mobileSearchIcon {
+    position: absolute;
+    left: var(--space-3);
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.mobileSearchInput {
+    width: 100%;
+    padding: var(--space-3);
+    padding-left: calc(var(--space-3) + 18px + var(--space-2));
+    padding-right: calc(var(--space-3) + 24px + var(--space-2));
+    font-size: var(--text-base);
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.mobileSearchInput:focus {
+    outline: none;
+    background-color: var(--bg-primary);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.1);
+}
+
+.mobileSearchInput::placeholder {
+    color: var(--text-tertiary);
+}
+
+.mobileSearchClose {
+    position: absolute;
+    right: var(--space-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-1);
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.mobileSearchClose:hover {
+    background-color: var(--color-gray-200);
+    color: var(--text-primary);
 }
 
 /* Desktop Navigation */
 .desktopNav {
     display: none;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-1);
+    background-color: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: var(--space-1);
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 @media (min-width: 768px) {
@@ -49,13 +252,14 @@
 }
 
 .navLink {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
     font-weight: var(--font-medium);
     font-size: var(--text-sm);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-5);
+    border-radius: 9999px;
     transition: all var(--transition-fast);
+    white-space: nowrap;
 }
 
 .navLink:hover {
@@ -65,32 +269,73 @@
 
 .navLinkActive {
     color: var(--text-inverse);
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Light background variant for nav */
+.headerLight .desktopNav {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.headerLight .navLink {
+    color: var(--text-secondary);
+}
+
+.headerLight .navLink:hover {
+    color: var(--text-primary);
+    background-color: var(--color-gray-100);
+}
+
+.headerLight .navLinkActive {
+    color: var(--text-primary);
+    background-color: var(--color-gray-100);
 }
 
 /* Right Section */
 .rightSection {
     display: flex;
     align-items: center;
-    gap: var(--space-4);
+    gap: var(--space-2);
+}
+
+@media (min-width: 768px) {
+    .rightSection {
+        gap: var(--space-3);
+    }
 }
 
 .loginButton {
     display: none;
     padding: var(--space-2) var(--space-4);
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: var(--text-inverse);
-    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
     font-weight: var(--font-medium);
     font-size: var(--text-sm);
     text-decoration: none;
     transition: all var(--transition-fast);
-    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .loginButton:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+    background-color: rgba(255, 255, 255, 0.2);
     color: var(--text-inverse);
+}
+
+.headerLight .loginButton {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.headerLight .loginButton:hover {
+    background-color: var(--color-gray-100);
+    color: var(--text-primary);
 }
 
 @media (min-width: 768px) {
@@ -99,30 +344,62 @@
     }
 }
 
-.userButton {
+.userMenu {
     display: none;
+}
+
+@media (min-width: 768px) {
+    .userMenu {
+        display: flex;
+    }
+}
+
+.userButton {
+    display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    background-color: rgba(255, 255, 255, 0.15);
+    padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+    background-color: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: var(--text-inverse);
-    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
     font-weight: var(--font-medium);
     font-size: var(--text-sm);
     text-decoration: none;
     transition: all var(--transition-fast);
-    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .userButton:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+    background-color: rgba(255, 255, 255, 0.2);
     color: var(--text-inverse);
 }
 
-@media (min-width: 768px) {
-    .userButton {
-        display: inline-flex;
-    }
+.headerLight .userButton {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.headerLight .userButton:hover {
+    background-color: var(--color-gray-50);
+    color: var(--text-primary);
+}
+
+.userButton svg {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: var(--text-inverse);
+}
+
+.headerLight .userButton svg {
+    background-color: var(--color-gray-200);
+    color: var(--text-secondary);
 }
 
 /* Menu Toggle */
@@ -131,7 +408,7 @@
     align-items: center;
     justify-content: center;
     padding: var(--space-2);
-    background: transparent;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: var(--text-inverse);
     cursor: pointer;
@@ -140,7 +417,7 @@
 }
 
 .menuToggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 @media (min-width: 768px) {
@@ -155,13 +432,16 @@
     top: 100%;
     left: 0;
     right: 0;
-    background-color: var(--color-primary);
+    background-color: rgba(26, 26, 46, 0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     padding: var(--space-4) var(--space-6);
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     animation: slideDown 0.2s ease-out;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @keyframes slideDown {
@@ -177,11 +457,12 @@
 }
 
 .mobileNavLink {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
     padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-weight: var(--font-medium);
+    font-size: var(--text-base);
     transition: all var(--transition-fast);
 }
 
@@ -198,11 +479,11 @@
 }
 
 .mobileLogoutButton {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.85);
     background: transparent;
     border: none;
     padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-weight: var(--font-medium);
     font-size: var(--text-base);
     text-align: left;

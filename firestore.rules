@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // ============================================================
-// Firestore Security Rules for Question Hub
+// Firestore Security Rules for QnHub
 // ============================================================
 
 service cloud.firestore {

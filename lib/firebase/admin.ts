@@ -66,6 +66,18 @@ export function getAdminStorage(): Storage {
   return adminStorage;
 }
 
+/**
+ * Get the default storage bucket with explicit bucket name
+ * This ensures the bucket name is always passed explicitly
+ */
+export function getStorageBucket() {
+  const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  if (!bucketName) {
+    throw new Error('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET environment variable is not set');
+  }
+  return getAdminStorage().bucket(bucketName);
+}
+
 // ============================================================
 // Admin Firestore Helpers
 // ============================================================

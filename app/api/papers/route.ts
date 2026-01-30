@@ -31,12 +31,16 @@ export async function GET(request: NextRequest) {
         : DEFAULT_PAGE_SIZE,
     };
 
+    const offset = searchParams.get('offset') 
+      ? parseInt(searchParams.get('offset')!) 
+      : 0;
+
     // Check authentication for admin privileges
-    const session = await getServerSession(authOptions); // We need to import getServerSession and authOptions
+    const session = await getServerSession(authOptions);
     const isAdmin = session?.user?.role === 'admin';
 
     // Build query using Admin SDK
-    let papers = await adminGetDocuments<Paper>(
+    let allPapers = await adminGetDocuments<Paper>(
       COLLECTIONS.PAPERS,
       (ref) => {
         let query: FirebaseFirestore.Query = ref;
@@ -68,9 +72,6 @@ export async function GET(request: NextRequest) {
         
         const uploadedBy = new URL(request.url).searchParams.get('uploadedBy');
         if (uploadedBy) {
-          // If not admin, can only filter by self? Or allowed?
-          // Standard users probably shouldn't see who uploaded what via API? 
-          // But 'uploadedBy' filter is useful for admins.
           query = query.where('uploadedBy', '==', uploadedBy);
         }
 
@@ -78,10 +79,10 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Client-side text search
+    // Client-side text search (if search term provided)
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      papers = papers.filter(
+      allPapers = allPapers.filter(
         (paper) =>
           paper.subjectName.toLowerCase().includes(searchLower) ||
           paper.subjectCode.toLowerCase().includes(searchLower) ||
@@ -89,15 +90,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Apply limit
-    if (filters.limit) {
-      papers = papers.slice(0, filters.limit);
-    }
+    // Get total count BEFORE pagination
+    const total = allPapers.length;
+
+    // Apply offset and limit for pagination
+    const paginatedPapers = allPapers.slice(offset, offset + (filters.limit || DEFAULT_PAGE_SIZE));
+    const hasMore = offset + paginatedPapers.length < total;
 
     return NextResponse.json({
-      items: papers,
-      total: papers.length,
-      hasMore: false,
+      items: paginatedPapers,
+      total,
+      hasMore,
+      offset,
+      limit: filters.limit,
     });
   } catch (error) {
     console.error('Error fetching papers:', error);

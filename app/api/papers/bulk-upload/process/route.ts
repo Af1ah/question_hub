@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import JSZip from 'jszip';
 import Papa from 'papaparse';
 import { 
-  getAdminStorage, 
+  getStorageBucket, 
   getAdminDb, 
   adminAddDocument, 
   FieldValue 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         sendEvent({ type: 'start', message: 'Initializing upload process...' });
 
         // 1. Download ZIP
-        const bucket = getAdminStorage().bucket();
+        const bucket = getStorageBucket();
         const file = bucket.file(filePath);
         
         if (!(await file.exists())[0]) {

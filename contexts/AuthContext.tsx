@@ -41,27 +41,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const syncFirebase = async () => {
             // @ts-ignore - session type extension might not be picked up immediately
             const token = session?.firebaseToken;
-            console.log('[AuthContext] Sync Triggered. Token present:', !!token);
 
             if (token && auth) {
                 try {
                     // Only sign in if different user or not signed in
                     const currentUser = auth.currentUser;
-                    console.log('[AuthContext] Current Firebase User:', currentUser?.uid, 'Session User:', session?.user.id);
 
                     if (!currentUser || currentUser.uid !== session?.user.id) {
-                        console.log('[AuthContext] Signing in with custom token...');
                         const { signInWithCustomToken } = await import('firebase/auth');
                         await signInWithCustomToken(auth, token);
-                        console.log('[AuthContext] Firebase Sign In Successful');
-                    } else {
-                        console.log('[AuthContext] Already signed in as correct user.');
                     }
-                } catch (err) {
+                } catch (err: unknown) {
                     console.error('[AuthContext] Firebase Auth Sync Error:', err);
+                    
+                    // Handle token expiry or invalid token errors
+                    const errorCode = (err as { code?: string })?.code;
+                    if (
+                        errorCode === 'auth/invalid-custom-token' ||
+                        errorCode === 'auth/custom-token-expired' ||
+                        errorCode === 'auth/argument-error'
+                    ) {
+                        console.log('[AuthContext] Token expired or invalid, signing out...');
+                        // Sign out from Firebase
+                        try {
+                            const { signOut: firebaseSignOut } = await import('firebase/auth');
+                            await firebaseSignOut(auth);
+                        } catch (signOutErr) {
+                            console.error('[AuthContext] Firebase sign out error:', signOutErr);
+                        }
+                        // Sign out from NextAuth - this will clear the session and force re-login
+                        await signOut({ redirect: true, callbackUrl: '/teacher/login' });
+                    }
                 }
-            } else {
-                console.log('[AuthContext] No token or auth instance available.');
+            } else if (!token && auth?.currentUser) {
+                // No session token but Firebase is signed in - sign out of Firebase
+                try {
+                    const { signOut: firebaseSignOut } = await import('firebase/auth');
+                    await firebaseSignOut(auth);
+                } catch (signOutErr) {
+                    console.error('[AuthContext] Firebase sign out error:', signOutErr);
+                }
             }
         };
         syncFirebase();

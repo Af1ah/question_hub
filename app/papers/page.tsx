@@ -18,8 +18,14 @@ function PapersContent() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [filters, setFilters] = useState<PaperFilters>({});
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [total, setTotal] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
+    const [offset, setOffset] = useState(0);
+
+    const PAGE_SIZE = 12;
 
     // Initialize filters from URL params
     useEffect(() => {
@@ -35,10 +41,11 @@ function PapersContent() {
         setFilters(initialFilters);
     }, [searchParams]);
 
-    // Fetch data when filters change
+    // Fetch data when filters change (reset pagination)
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
+            setOffset(0);
             try {
                 // Build query string
                 const params = new URLSearchParams();
@@ -47,6 +54,8 @@ function PapersContent() {
                         params.set(key, String(value));
                     }
                 });
+                params.set('limit', String(PAGE_SIZE));
+                params.set('offset', '0');
 
                 const [papersRes, deptsRes, typesRes] = await Promise.all([
                     fetch(`/api/papers?${params.toString()}`),
@@ -57,6 +66,8 @@ function PapersContent() {
                 if (papersRes.ok) {
                     const data = await papersRes.json();
                     setPapers(data.items || []);
+                    setTotal(data.total || 0);
+                    setHasMore(data.hasMore || false);
                 }
                 if (deptsRes.ok) setDepartments(await deptsRes.json());
                 if (typesRes.ok) setSubjectTypes(await typesRes.json());
@@ -69,6 +80,33 @@ function PapersContent() {
 
         fetchData();
     }, [filters]);
+
+    const handleLoadMore = async () => {
+        setLoadingMore(true);
+        const newOffset = offset + PAGE_SIZE;
+        try {
+            const params = new URLSearchParams();
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== '') {
+                    params.set(key, String(value));
+                }
+            });
+            params.set('limit', String(PAGE_SIZE));
+            params.set('offset', String(newOffset));
+
+            const res = await fetch(`/api/papers?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setPapers((prev) => [...prev, ...(data.items || [])]);
+                setHasMore(data.hasMore || false);
+                setOffset(newOffset);
+            }
+        } catch (error) {
+            console.error('Error loading more:', error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     const handleSearch = (query: string) => {
         setFilters((prev) => ({ ...prev, search: query }));
@@ -90,7 +128,7 @@ function PapersContent() {
                     <div>
                         <h1 className={styles.title}>Browse Question Papers</h1>
                         <p className={styles.subtitle}>
-                            {papers.length} papers found
+                            {total} papers found
                             {filters.search && ` for "${filters.search}"`}
                         </p>
                     </div>
@@ -115,17 +153,37 @@ function PapersContent() {
                     </button>
                 </div>
 
-                {/* Papers Grid */}
+                {/* Papers List */}
                 {loading ? (
                     <div className={styles.loadingWrapper}>
                         <LoadingSpinner size="lg" />
                     </div>
                 ) : papers.length > 0 ? (
-                    <div className={styles.papersGrid}>
-                        {papers.map((paper) => (
-                            <PaperCard key={paper.id} paper={paper} />
-                        ))}
-                    </div>
+                    <>
+                        <div className={styles.papersList}>
+                            {papers.map((paper) => (
+                                <PaperCard key={paper.id} paper={paper} variant="compact" />
+                            ))}
+                        </div>
+                        {hasMore && (
+                            <div className={styles.loadMoreWrapper}>
+                                <button
+                                    onClick={handleLoadMore}
+                                    className={styles.loadMoreButton}
+                                    disabled={loadingMore}
+                                >
+                                    {loadingMore ? (
+                                        <>
+                                            <LoadingSpinner size="sm" />
+                                            <span>Loading...</span>
+                                        </>
+                                    ) : (
+                                        <span>Load More Papers</span>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <EmptyState
                         title="No Papers Found"
