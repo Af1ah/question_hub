@@ -1,0 +1,67 @@
+/* Section */
+.section {
+    padding: var(--space-10) var(--space-4);
+    background-color: var(--bg-secondary);
+}
+
+@media (min-width: 640px) {
+    .section {
+        padding: var(--space-12) var(--space-6);
+    }
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.sectionHeader {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+
+@media (min-width: 640px) {
+    .sectionHeader {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-8);
+    }
+}
+
+.sectionTitle {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    margin: 0;
+}
+
+@media (min-width: 640px) {
+    .sectionTitle {
+        font-size: var(--text-2xl);
+    }
+}
+
+.viewAllLink {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-accent);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    transition: gap var(--transition-fast);
+}
+
+.viewAllLink:hover {
+    gap: var(--space-3);
+}
+
+/* Recent Papers List */
+.recentPapersList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}

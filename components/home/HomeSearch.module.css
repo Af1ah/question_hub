@@ -1,0 +1,35 @@
+/* Search Wrapper */
+.searchWrapper {
+    display: flex;
+    gap: var(--space-3);
+    max-width: 580px;
+    margin: 0 auto;
+}
+
+.filterButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: var(--text-inverse);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.filterButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+@media (min-width: 640px) {
+    .filterButton {
+        width: 56px;
+        height: 56px;
+    }
+}
