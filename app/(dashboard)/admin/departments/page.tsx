@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Building2, Plus, Pencil, Trash2, X, Check, Merge } from 'lucide-react';
 import { Department } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -18,6 +18,12 @@ export default function AdminDepartmentsPage() {
     const [code, setCode] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    // Merge state
+    const [showMergeModal, setShowMergeModal] = useState(false);
+    const [mergingDept, setMergingDept] = useState<Department | null>(null);
+    const [mergeTargetId, setMergeTargetId] = useState('');
+    const [merging, setMerging] = useState(false);
 
     useEffect(() => {
         fetchDepartments();
@@ -100,6 +106,46 @@ export default function AdminDepartmentsPage() {
         }
     };
 
+    const handleMerge = (dept: Department) => {
+        setMergingDept(dept);
+        setMergeTargetId('');
+        setError('');
+        setShowMergeModal(true);
+    };
+
+    const handleMergeSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!mergingDept || !mergeTargetId) return;
+
+        const targetDept = departments.find(d => d.id === mergeTargetId);
+        if (!confirm(`Merge all papers from "${mergingDept.name}" into "${targetDept?.name}"? This will delete "${mergingDept.name}".`)) return;
+
+        setMerging(true);
+        setError('');
+
+        try {
+            const res = await fetch(`/api/departments/${mergingDept.id}/merge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetId: mergeTargetId }),
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                alert(`Merged ${data.mergedPapers} paper(s) successfully.`);
+                setShowMergeModal(false);
+                fetchDepartments();
+            } else {
+                const data = await res.json();
+                setError(data.error || 'Failed to merge');
+            }
+        } catch (error) {
+            setError('An error occurred during merge');
+        } finally {
+            setMerging(false);
+        }
+    };
+
     if (loading) return <LoadingSpinner size="lg" />;
 
     return (
@@ -123,6 +169,13 @@ export default function AdminDepartmentsPage() {
                                     <Building2 size={24} />
                                 </div>
                                 <div className={styles.actions}>
+                                    <button
+                                        onClick={() => handleMerge(dept)}
+                                        className={styles.iconButton}
+                                        title="Merge into another department"
+                                    >
+                                        <Merge size={16} />
+                                    </button>
                                     <button
                                         onClick={() => handleEdit(dept)}
                                         className={styles.iconButton}
@@ -186,6 +239,50 @@ export default function AdminDepartmentsPage() {
                                 </button>
                                 <button type="submit" disabled={submitting} className={styles.submitButton}>
                                     {submitting ? 'Saving...' : 'Save Department'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showMergeModal && mergingDept && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h2>Merge Department</h2>
+                            <button onClick={() => setShowMergeModal(false)} className={styles.closeButton}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleMergeSubmit} className={styles.form}>
+                            {error && <div className={styles.error}>{error}</div>}
+                            <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                                All papers from <strong>&ldquo;{mergingDept.name}&rdquo;</strong> will be moved to the selected department. Then <strong>&ldquo;{mergingDept.name}&rdquo;</strong> will be deleted.
+                            </p>
+                            <div className={styles.field}>
+                                <label>Merge Into</label>
+                                <select
+                                    value={mergeTargetId}
+                                    onChange={e => setMergeTargetId(e.target.value)}
+                                    required
+                                    style={{ width: '100%', padding: '0.625rem', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.9rem', backgroundColor: 'var(--color-surface)' }}
+                                >
+                                    <option value="">Select target department...</option>
+                                    {departments
+                                        .filter(d => d.id !== mergingDept.id)
+                                        .map(d => (
+                                            <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                            <div className={styles.modalActions}>
+                                <button type="button" onClick={() => setShowMergeModal(false)} className={styles.cancelButton}>
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={merging || !mergeTargetId} className={styles.submitButton} style={{ backgroundColor: 'var(--color-warning, #e67e22)' }}>
+                                    {merging ? 'Merging...' : 'Merge & Delete'}
                                 </button>
                             </div>
                         </form>

@@ -107,6 +107,8 @@ export function normalizeSubjectTypeName(folderName: string): string {
   if (normalized.startsWith('minor')) return 'Minor';
   if (normalized === 'mdc') return 'MDC';
   if (normalized === 'vac-sec' || normalized === 'vacsec') return 'VAC-SEC';
+  if (normalized.startsWith('aec')) return 'AEC';
+  if (normalized === 'sec') return 'SEC';
   
   // Return as-is if not matched
   return folderName;

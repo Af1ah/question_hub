@@ -3,8 +3,35 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import JSZip from 'jszip';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { getStorageBucket, getAdminDb, adminGetDocuments } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/constants';
+
+// ============================================================
+// Subject Code Extraction (supports 3 formats)
+// ============================================================
+
+function extractSubjectCodeAndName(
+  paperName: string,
+  fallbackCode: string
+): { subjectCode: string; subjectName: string } {
+  // Format A: "CODE - Name"
+  const formatA = paperName.match(/^([A-Z]{2,4}\d[A-Z0-9]+(?:\([A-Z0-9]+\))?)\s*-\s*(.+)$/i);
+  if (formatA) {
+    return { subjectCode: formatA[1].trim(), subjectName: formatA[2].trim() };
+  }
+  // Format B: "Name--(Type)--(CODE)"
+  const formatB = paperName.match(/^(.+?)--\(.+?\)--\(([A-Z]{2,4}\d[A-Z0-9()\s]*)\)\s*$/i);
+  if (formatB) {
+    return { subjectCode: formatB[2].replace(/[()\s]/g, '').trim(), subjectName: formatB[1].trim() };
+  }
+  // Format C: "Name (CODE)"
+  const formatC = paperName.match(/^(.+?)\s*\(([A-Z]{2,4}\d[A-Z0-9()\s]*)\)\s*$/i);
+  if (formatC) {
+    return { subjectCode: formatC[2].replace(/[()\s]/g, '').trim(), subjectName: formatC[1].trim() };
+  }
+  return { subjectCode: fallbackCode, subjectName: paperName };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -42,32 +69,49 @@ export async function POST(request: NextRequest) {
     // 2. Load ZIP
     const zip = await JSZip.loadAsync(buffer);
 
-    // 3. Find CSV
-    let csvContent = '';
+    // 3. Find metadata file (CSV preferred, XLSX fallback)
+    let metadataRows: string[][] = [];
     let csvFileName = '';
+    let csvFile: JSZip.JSZipObject | null = null;
+    let xlsxFile: JSZip.JSZipObject | null = null;
     
     for (const [path, zipEntry] of Object.entries(zip.files)) {
-      if (path.toLowerCase().endsWith('.csv') && !zipEntry.dir) {
-        csvContent = await zipEntry.async('text');
+      if (zipEntry.dir) continue;
+      const lower = path.toLowerCase();
+      if (lower.endsWith('.csv') && !csvFile) {
+        csvFile = zipEntry;
         csvFileName = path;
-        break;
+      } else if ((lower.endsWith('.xlsx') || lower.endsWith('.xls')) && !xlsxFile) {
+        xlsxFile = zipEntry;
+        if (!csvFileName) csvFileName = path;
       }
     }
 
-    if (!csvContent) {
+    if (csvFile) {
+      const csvContent = await csvFile.async('text');
+      const parsed = Papa.parse<string[]>(csvContent, { skipEmptyLines: true });
+      metadataRows = parsed.data || [];
+    } else if (xlsxFile) {
+      const buffer = await xlsxFile.async('nodebuffer');
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (firstSheet) {
+        metadataRows = XLSX.utils.sheet_to_json<string[]>(firstSheet, { header: 1, defval: '' });
+      }
+      csvFileName = xlsxFile.name;
+    }
+
+    if (metadataRows.length === 0) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No CSV file found in the ZIP archive.' 
+        error: 'No CSV or XLSX metadata file found in the ZIP archive.' 
       });
     }
 
-    // 4. Parse CSV
-    const parsed = Papa.parse<string[]>(csvContent, { skipEmptyLines: true });
-    
-    if (!parsed.data || parsed.data.length < 3) {
+    if (metadataRows.length < 2) {
       return NextResponse.json({ 
         success: false, 
-        error: 'CSV file is empty or missing header/data rows.' 
+        error: 'Metadata file is empty or missing data rows.' 
       });
     }
 
@@ -101,14 +145,29 @@ export async function POST(request: NextRequest) {
     // Track QP codes seen in this CSV to detect duplicates within the file
     const seenQPCodesInCSV = new Set<string>();
     
-    // Skip first 2 headers (as per original logic)
-    for (let i = 2; i < parsed.data.length; i++) {
-        const row = parsed.data[i];
-        if (!row || row.length < 3) continue;
+    // 7. Auto-detect CSV format and process rows
+    const header = metadataRows[0];
+    const isOldFormat = header && header.length >= 4;
+    const startRow = isOldFormat ? 2 : 1;
+    
+    for (let i = startRow; i < metadataRows.length; i++) {
+        const row = metadataRows[i];
+        if (!row) continue;
 
-        const dateField = row[0]?.trim();
-        const qpCode = row[1]?.trim();
-        const paperName = row[2]?.trim();
+        let dateField = '';
+        let qpCode = '';
+        let paperName = '';
+
+        if (isOldFormat) {
+          if (row.length < 3) continue;
+          dateField = String(row[0] ?? '').trim();
+          qpCode = String(row[1] ?? '').trim();
+          paperName = String(row[2] ?? '').trim();
+        } else {
+          if (row.length < 2) continue;
+          qpCode = String(row[0] ?? '').trim();
+          paperName = String(row[1] ?? '').trim();
+        }
 
         if (!qpCode || !paperName) continue;
 
@@ -117,7 +176,6 @@ export async function POST(request: NextRequest) {
         let issues = [];
 
         // Find PDF file that contains the QP Code in its name
-        // (Assuming QP Code is unique enough to not match random parts of other filenames)
         const foundPdf = pdfFiles.find(f => f.name.includes(qpCode));
 
         if (!foundPdf) {
@@ -136,7 +194,6 @@ export async function POST(request: NextRequest) {
             status = 'error';
             issues.push('Duplicate in CSV (will be skipped)');
         } else {
-            // Only add to set if not already seen
             seenQPCodesInCSV.add(qpCode);
         }
 
@@ -146,15 +203,18 @@ export async function POST(request: NextRequest) {
         if (foundPdf) {
              const pathParts = foundPdf.path.split('/');
              for (const part of pathParts) {
-                if (/^(major|minor|mdc|vac-?sec)/i.test(part)) {
+                if (/^(major|minor|mdc|vac-?sec|aec|sec)/i.test(part)) {
                    folderType = part;
                    break;
                 }
              }
         }
 
+        // Extract subject code for display
+        const { subjectCode } = extractSubjectCodeAndName(paperName, qpCode);
+
         previewItems.push({
-            id: i, // row index
+            id: i,
             date: dateField,
             qpCode,
             paperName,

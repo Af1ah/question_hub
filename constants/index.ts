@@ -4,7 +4,7 @@
 
 export const SITE_NAME = 'QnHub';
 export const SITE_DESCRIPTION = 'Your comprehensive question paper bank for all academic needs';
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://questionhub.com';
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://qnhub.gctanur.in';
 
 // ============================================================
 // Semester Options
