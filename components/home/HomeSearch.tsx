@@ -11,9 +11,10 @@ import styles from './HomeSearch.module.css';
 interface HomeSearchProps {
     departments: Department[];
     subjectTypes: SubjectType[];
+    availableYears?: number[];
 }
 
-export function HomeSearch({ departments, subjectTypes }: HomeSearchProps) {
+export function HomeSearch({ departments, subjectTypes, availableYears }: HomeSearchProps) {
     const [filters, setFilters] = useState<PaperFilters>({});
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -59,6 +60,7 @@ export function HomeSearch({ departments, subjectTypes }: HomeSearchProps) {
                 onApply={handleApplyFilters}
                 departments={departments}
                 subjectTypes={subjectTypes}
+                availableYears={availableYears}
             />
         </>
     );

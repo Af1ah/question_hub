@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Download, FileDown, Calendar, BookOpen, Tag } from 'lucide-react';
+import { Download, Eye, Calendar, BookOpen, Tag } from 'lucide-react';
 import { Paper } from '@/types';
 import { ROUTES } from '@/constants';
 import styles from './PaperCard.module.css';
@@ -10,6 +10,9 @@ interface PaperCardProps {
 }
 
 export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
+    const previewUrl = `/api/papers/${paper.seoSlug}/file?mode=preview`;
+    const downloadUrl = `/api/papers/${paper.seoSlug}/file?mode=download`;
+
     if (variant === 'compact') {
         return (
             <article className={styles.compactCard}>
@@ -34,24 +37,21 @@ export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
                 </Link>
                 <div className={styles.compactActions}>
                     <a
-                        href={paper.fileUrl}
+                        href={previewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={styles.primaryDownloadBtn}
-                        download
+                        aria-label="Preview paper"
                     >
-                        <Download size={18} />
-                        <span>Download</span>
+                        <Eye size={18} />
+                        <span>Preview</span>
                     </a>
                     <a
-                        href={paper.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={downloadUrl}
                         className={styles.secondaryDownloadBtn}
-                        download
                         aria-label="Download paper"
                     >
-                        <FileDown size={18} />
+                        <Download size={18} />
                     </a>
                 </div>
             </article>
@@ -77,16 +77,22 @@ export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
             {/* Actions */}
             <div className={styles.actions}>
                 <a
-                    href={paper.fileUrl}
+                    href={previewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.downloadButton}
-                    download
+                >
+                    <Eye size={16} />
+                    <span>Preview</span>
+                </a>
+                <a
+                    href={downloadUrl}
+                    className={styles.downloadButtonSecondary}
                 >
                     <Download size={16} />
-                    <span>Download</span>
                 </a>
             </div>
         </article>
     );
 }
+

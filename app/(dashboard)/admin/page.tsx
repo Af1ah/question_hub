@@ -23,15 +23,15 @@ export default function AdminDashboardPage() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Fetch papers count
-                const papersRes = await fetch('/api/papers?limit=1000');
-                if (papersRes.ok) {
-                    const data = await papersRes.json();
-                    setStats(prev => ({
-                        ...prev,
-                        totalPapers: data.items?.length || 0,
-                        totalDownloads: data.items?.reduce((sum: number, p: { downloadCount?: number }) => sum + (p.downloadCount || 0), 0) || 0,
-                    }));
+                const res = await fetch('/api/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStats({
+                        totalPapers: data.totalPapers || 0,
+                        totalTeachers: data.totalTeachers || 0,
+                        totalDownloads: data.totalDownloads || 0,
+                        recentUploads: data.recentUploads || 0,
+                    });
                 }
             } catch (error) {
                 console.error('Error fetching stats:', error);

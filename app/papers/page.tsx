@@ -17,6 +17,7 @@ function PapersContent() {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
+    const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [filters, setFilters] = useState<PaperFilters>({});
@@ -57,10 +58,11 @@ function PapersContent() {
                 params.set('limit', String(PAGE_SIZE));
                 params.set('offset', '0');
 
-                const [papersRes, deptsRes, typesRes] = await Promise.all([
+                const [papersRes, deptsRes, typesRes, yearsRes] = await Promise.all([
                     fetch(`/api/papers?${params.toString()}`),
                     fetch('/api/departments'),
                     fetch('/api/subject-types'),
+                    fetch('/api/papers/years'),
                 ]);
 
                 if (papersRes.ok) {
@@ -71,6 +73,7 @@ function PapersContent() {
                 }
                 if (deptsRes.ok) setDepartments(await deptsRes.json());
                 if (typesRes.ok) setSubjectTypes(await typesRes.json());
+                if (yearsRes.ok) setAvailableYears(await yearsRes.json());
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
@@ -204,6 +207,7 @@ function PapersContent() {
                 onApply={handleApplyFilters}
                 departments={departments}
                 subjectTypes={subjectTypes}
+                availableYears={availableYears}
             />
         </div>
     );

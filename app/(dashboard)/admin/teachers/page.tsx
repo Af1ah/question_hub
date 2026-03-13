@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, X, User as UserIcon, Trash2, Shield, GraduationCap, ArrowRightLeft, Copy, CheckCircle, AlertCircle } from 'lucide-react';
+import { UserPlus, X, User as UserIcon, Trash2, Shield, GraduationCap, ArrowRightLeft, Copy, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { User, Department } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -12,6 +12,7 @@ export default function AdminUsersPage() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInviteModal, setShowInviteModal] = useState(false);
+    const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
 
     // Filter State
     const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher'>('all');
@@ -145,6 +146,7 @@ export default function AdminUsersPage() {
         const newRole = currentRole === 'admin' ? 'teacher' : 'admin';
         if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
 
+        setChangingRoleId(userId);
         try {
             const res = await fetch(`/api/users/${userId}/role`, {
                 method: 'PATCH',
@@ -160,6 +162,8 @@ export default function AdminUsersPage() {
         } catch (error) {
             console.error('Error updating role:', error);
             alert('Error updating role');
+        } finally {
+            setChangingRoleId(null);
         }
     };
 
@@ -243,13 +247,19 @@ export default function AdminUsersPage() {
                                                 onClick={() => handleRoleSwitch(user.id, user.role)}
                                                 className={styles.iconButton}
                                                 title="Switch Role"
+                                                disabled={changingRoleId === user.id}
                                             >
-                                                <ArrowRightLeft size={16} />
+                                                {changingRoleId === user.id ? (
+                                                    <><Loader2 size={16} className={styles.spinner} /> <span className={styles.changingText}>Changing...</span></>
+                                                ) : (
+                                                    <ArrowRightLeft size={16} />
+                                                )}
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteUser(user.id)}
                                                 className={`${styles.iconButton} ${styles.delete}`}
                                                 title="Delete User"
+                                                disabled={changingRoleId === user.id}
                                             >
                                                 <Trash2 size={16} />
                                             </button>

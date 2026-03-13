@@ -7,9 +7,10 @@ import styles from './HeroSection.module.css';
 interface HeroSectionProps {
     departments: Department[];
     subjectTypes: SubjectType[];
+    availableYears?: number[];
 }
 
-export function HeroSection({ departments, subjectTypes }: HeroSectionProps) {
+export function HeroSection({ departments, subjectTypes, availableYears }: HeroSectionProps) {
     return (
         <section className={styles.hero}>
             {/* Background Image */}
@@ -35,7 +36,7 @@ export function HeroSection({ departments, subjectTypes }: HeroSectionProps) {
                     Browse and download previous year papers instantly.
                 </p>
 
-                <HomeSearch departments={departments} subjectTypes={subjectTypes} />
+                <HomeSearch departments={departments} subjectTypes={subjectTypes} availableYears={availableYears} />
             </div>
         </section>
     );

@@ -165,6 +165,34 @@
     color: var(--color-error);
 }
 
+.iconButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    width: auto;
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+}
+
+.iconButton:disabled:hover {
+    background-color: transparent;
+    color: var(--text-secondary);
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.changingText {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
 .emptyInviteButton {
     padding: var(--space-3) var(--space-5);
     background-color: var(--color-primary);

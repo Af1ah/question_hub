@@ -13,6 +13,7 @@ interface FilterModalProps {
     onApply: (filters: PaperFilters) => void;
     departments: Department[];
     subjectTypes: SubjectType[];
+    availableYears?: number[];
 }
 
 export function FilterModal({
@@ -22,9 +23,12 @@ export function FilterModal({
     onApply,
     departments,
     subjectTypes,
+    availableYears,
 }: FilterModalProps) {
     const [localFilters, setLocalFilters] = useState<PaperFilters>(filters);
-    const yearOptions = getYearOptions();
+    const yearOptions = availableYears
+        ? availableYears.map((y) => ({ value: y, label: String(y) }))
+        : getYearOptions();
 
     // Reset local filters when modal opens
     useEffect(() => {

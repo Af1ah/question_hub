@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, Download, Calendar, BookOpen, Building, Tag, ArrowLeft } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, BookOpen, Building, Tag, ArrowLeft } from 'lucide-react';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { Paper } from '@/types';
@@ -132,7 +132,7 @@ function generateStructuredData(paper: Paper) {
         },
         potentialAction: {
             '@type': 'DownloadAction',
-            target: paper.fileUrl,
+            target: `${SITE_URL}/api/papers/${paper.seoSlug}/file?mode=download`,
         },
     };
 }
@@ -228,15 +228,24 @@ export default async function PaperDetailPage({ params }: PageProps) {
                                 <span className={styles.fileName}>{paper.fileName}</span>
                                 <span className={styles.fileSize}>{formatFileSize(paper.fileSize)}</span>
                             </div>
-                            <a
-                                href={paper.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.downloadButton}
-                            >
-                                <Download size={20} />
-                                <span>Download Paper</span>
-                            </a>
+                            <div className={styles.downloadActions}>
+                                <a
+                                    href={`/api/papers/${paper.seoSlug}/file?mode=preview`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.previewButton}
+                                >
+                                    <Eye size={20} />
+                                    <span>Preview</span>
+                                </a>
+                                <a
+                                    href={`/api/papers/${paper.seoSlug}/file?mode=download`}
+                                    className={styles.downloadButton}
+                                >
+                                    <Download size={20} />
+                                    <span>Download</span>
+                                </a>
+                            </div>
                         </div>
 
                         {/* Stats */}

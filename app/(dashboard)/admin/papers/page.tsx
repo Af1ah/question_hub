@@ -54,7 +54,7 @@ export default function AdminPapersPage() {
             if (selectedUser) params.append('uploadedBy', selectedUser);
 
             // Allow admins to see unpublished
-            params.append('publishedOnly', 'false');
+            params.append('showAll', 'true');
 
             const [papersRes, usersRes] = await Promise.all([
                 fetch(`/api/papers?${params.toString()}`),
