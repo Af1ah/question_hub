@@ -37,6 +37,19 @@
     border-radius: var(--radius-xl);
     padding: var(--space-8);
     box-shadow: var(--shadow-2xl);
+    position: relative;
+}
+
+.backButton {
+    position: absolute;
+    top: var(--space-6);
+    left: var(--space-6);
+    color: var(--text-tertiary);
+    transition: color var(--transition-fast);
+}
+
+.backButton:hover {
+    color: var(--color-accent);
 }
 
 .title {
@@ -52,6 +65,7 @@
     color: var(--text-secondary);
     margin: 0 0 var(--space-6) 0;
     text-align: center;
+    line-height: 1.5;
 }
 
 /* Form */
@@ -111,63 +125,7 @@
     border-color: var(--color-accent);
 }
 
-.togglePassword {
-    position: absolute;
-    right: var(--space-3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-1);
-    background: transparent;
-    border: none;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    transition: color var(--transition-fast);
-}
-
-.togglePassword:hover {
-    color: var(--text-secondary);
-}
-
-/* Checkbox */
-.checkbox {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-}
-
-.checkboxInput {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--color-accent);
-}
-
-.checkboxLabel {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-}
-
-/* Forgot Password */
-.forgotPasswordWrapper {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: calc(var(--space-2) * -1);
-}
-
-.forgotPassword {
-    font-size: var(--text-sm);
-    color: var(--color-accent);
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-
-.forgotPassword:hover {
-    color: var(--color-accent-light);
-    text-decoration: underline;
-}
-
 /* Submit */
-
 .submitButton {
     width: 100%;
     padding: var(--space-4);
@@ -191,17 +149,13 @@
     cursor: not-allowed;
 }
 
-/* Back Link */
-.backLink {
-    display: block;
-    text-align: center;
-    margin-top: var(--space-6);
-    font-size: var(--text-sm);
-    color: var(--color-accent);
-    text-decoration: none;
-    transition: color var(--transition-fast);
+/* Success State */
+.successIconWrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-4);
 }
 
-.backLink:hover {
-    color: var(--color-accent-light);
+.successIcon {
+    color: var(--color-success);
 }

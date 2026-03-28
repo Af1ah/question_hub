@@ -231,6 +231,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials): Promise<User | null> {
+        console.log('Attempting Teacher Login:', credentials?.email);
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required');
         }
@@ -238,17 +239,30 @@ export const authOptions: NextAuthOptions = {
         const user = await findUserByEmail(credentials.email);
         
         // Check if user exists, has password hash, and is a TEACHER
-        if (!user || !user.passwordHash || user.role !== 'teacher') {
+        if (!user) {
+          console.log('Teacher Login Failed: User not found');
+          throw new Error('Invalid credentials');
+        }
+
+        if (!user.passwordHash) {
+          console.log('Teacher Login Failed: No password hash (user might not have completed onboarding)');
+          throw new Error('Invalid credentials');
+        }
+
+        if (user.role !== 'teacher') {
+          console.log(`Teacher Login Failed: Role mismatch. Expected teacher, got ${user.role}`);
           throw new Error('Invalid credentials');
         }
 
         if (!user.isActive) {
-          throw new Error('Your account has been deactivated');
+          console.log('Teacher Login Failed: Account is not active');
+          throw new Error('Your account has been deactivated or not initialized');
         }
 
         const isValidPassword = await compare(credentials.password, user.passwordHash);
 
         if (!isValidPassword) {
+          console.log('Teacher Login Failed: Password mismatch');
           throw new Error('Invalid credentials');
         }
 

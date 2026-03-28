@@ -249,3 +249,9 @@ export interface TeacherInviteEmail {
   onboardingLink: string;     // Secure onboarding URL with token
 }
 
+export interface TeacherPasswordResetEmail {
+  to: string;
+  teacherName: string;
+  resetLink: string;          // Secure password reset URL with token
+}
+

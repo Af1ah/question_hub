@@ -110,6 +110,13 @@ export default function TeacherLoginPage() {
                             </div>
                         </div>
 
+                        {/* Forgot Password Link */}
+                        <div className={styles.forgotPasswordWrapper}>
+                            <Link href="/teacher/forgot-password" className={styles.forgotPassword}>
+                                Forgot Password?
+                            </Link>
+                        </div>
+
                         {/* Submit */}
                         <button
                             type="submit"

@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { TeacherInviteEmail } from '@/types';
+import { TeacherInviteEmail, TeacherPasswordResetEmail } from '@/types';
 
 // ============================================================
 // Email Transporter Configuration
@@ -120,6 +120,92 @@ If you didn't expect this invitation, you can safely ignore this email.
   return { subject, html, text };
 };
 
+const passwordResetTemplate = (data: TeacherPasswordResetEmail): { subject: string; html: string; text: string } => {
+  const subject = `Reset Your Password - QnHub`;
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password - QnHub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nova+Round&display=swap" rel="stylesheet">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px 12px 0 0;">
+              <span style="color: #ffffff; font-size: 28px; font-weight: 400; font-family: 'Nova Round', sans-serif;">
+                QnHub
+              </span>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                Password Reset Request
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Hi ${data.teacherName},
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                We received a request to reset your password for your QnHub account. Click the button below to choose a new password.
+              </p>
+              
+              <a href="${data.resetLink}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Reset Password
+              </a>
+              
+              <div style="margin-top: 30px; padding: 16px; background-color: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; color: #856404; font-size: 14px;">
+                  <strong>This link expires in 1 hour.</strong> If you didn't request this, you can safely ignore this email.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 12px 12px; text-align: center;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © ${new Date().getFullYear()} QnHub. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+  
+  const text = `
+Password Reset Request - QnHub
+
+Hi ${data.teacherName},
+
+We received a request to reset your password for your QnHub account.
+To choose a new password, visit:
+${data.resetLink}
+
+This link expires in 1 hour.
+---
+If you didn't request a password reset, you can safely ignore this email.
+  `;
+  
+  return { subject, html, text };
+};
+
 // ============================================================
 // Email Sending Functions
 // ============================================================
@@ -163,6 +249,47 @@ export async function sendTeacherInviteEmail(data: TeacherInviteEmail): Promise<
     error: lastError?.message || 'Failed to send email after multiple attempts' 
   };
 }
+
+/**
+ * Send teacher password reset email with retry logic
+ */
+export async function sendPasswordResetEmail(data: TeacherPasswordResetEmail): Promise<{ success: boolean; error?: string }> {
+  const maxRetries = 2;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const transporter = createTransporter();
+      const { subject, html, text } = passwordResetTemplate(data);
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: data.to,
+        subject,
+        html,
+        text,
+      });
+
+      console.log(`✅ Password reset email sent to ${data.to}`);
+      return { success: true };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      console.error(`❌ Email attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+      
+      // Wait before retry (exponential backoff)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  }
+
+  console.error('❌ All email attempts failed:', lastError?.message);
+  return { 
+    success: false, 
+    error: lastError?.message || 'Failed to send email after multiple attempts' 
+  };
+}
+
 
 /**
  * Verify email configuration
