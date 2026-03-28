@@ -53,10 +53,43 @@ export async function getAllDepartmentsWithHierarchy() {
 
     const allSubjects = [...subjects, ...Object.values(virtualSubjectsMap)];
 
+    const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
     // Organize data hierarchically
     const departmentsMap: Record<string, Department> = {};
+    const departmentBySlug: Record<string, Department> = {};
+    const usedDeptSlugs = new Set<string>();
+
     departments.forEach(dept => {
+      let baseSlug = dept.code ? slugify(dept.code) : slugify(dept.name);
+      if (!baseSlug) baseSlug = dept.id;
+      let finalSlug = baseSlug;
+      let counter = 1;
+      while (usedDeptSlugs.has(finalSlug)) {
+        finalSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      usedDeptSlugs.add(finalSlug);
+      dept.slug = finalSlug;
       departmentsMap[dept.id] = dept;
+      departmentBySlug[finalSlug] = dept;
+    });
+
+    const usedSubjectSlugs = new Set<string>();
+    const subjectBySlug: Record<string, Subject> = {};
+
+    allSubjects.forEach(subject => {
+      let baseSlug = slugify(subject.name);
+      if (!baseSlug) baseSlug = subject.code ? slugify(subject.code) : subject.id;
+      let finalSlug = baseSlug;
+      let counter = 1;
+      while (usedSubjectSlugs.has(finalSlug)) {
+        finalSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      usedSubjectSlugs.add(finalSlug);
+      subject.slug = finalSlug;
+      subjectBySlug[finalSlug] = subject;
     });
 
     // Group subjects by department and semester
@@ -101,9 +134,11 @@ export async function getAllDepartmentsWithHierarchy() {
 
     return {
       departments: Object.values(departmentsMap),
+      departmentBySlug,
       semesters: semestersArray,
       subjectsBySemester: subjectsByDeptSemester,
-      papersBySubject: papersBySubject
+      papersBySubject: papersBySubject,
+      subjectBySlug
     };
   } catch (error) {
     console.error('Error fetching hierarchy data:', error);

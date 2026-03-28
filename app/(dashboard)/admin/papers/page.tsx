@@ -5,21 +5,18 @@ import { useRouter } from 'next/navigation';
 import {
     FileText,
     Search,
-    Filter,
     Trash2,
-    Edit,
-    Eye,
+    Pencil,
     Download,
     User as UserIcon,
-    Calendar,
-    MoreVertical,
     CheckCircle,
     XCircle
 } from 'lucide-react';
-import { Paper, User } from '@/types';
+import { Paper, User, Department, SubjectType } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { EditPaperModal } from '@/components/admin/EditPaperModal';
 import { getYearOptions } from '@/constants';
 import styles from './page.module.css';
 
@@ -27,6 +24,8 @@ export default function AdminPapersPage() {
     const router = useRouter();
     const [papers, setPapers] = useState<Paper[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filters
@@ -34,6 +33,9 @@ export default function AdminPapersPage() {
     const [selectedYear, setSelectedYear] = useState<number | ''>('');
     const [selectedUser, setSelectedUser] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    // Edit modal
+    const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(search), 500);
@@ -47,30 +49,26 @@ export default function AdminPapersPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Build query params
             const params = new URLSearchParams();
             if (debouncedSearch) params.append('search', debouncedSearch);
             if (selectedYear) params.append('yearOfExam', selectedYear.toString());
             if (selectedUser) params.append('uploadedBy', selectedUser);
-
-            // Allow admins to see unpublished
             params.append('showAll', 'true');
 
-            const [papersRes, usersRes] = await Promise.all([
+            const [papersRes, usersRes, deptsRes, typesRes] = await Promise.all([
                 fetch(`/api/papers?${params.toString()}`),
-                // Fetch users only once if possible, but map requires it. 
-                // We can optimize by fetching users once on mount.
                 users.length === 0 ? fetch('/api/users') : Promise.resolve(null),
+                departments.length === 0 ? fetch('/api/departments') : Promise.resolve(null),
+                subjectTypes.length === 0 ? fetch('/api/subject-types') : Promise.resolve(null),
             ]);
 
             if (papersRes.ok) {
                 const data = await papersRes.json();
                 setPapers(data.items || []);
             }
-
-            if (usersRes && usersRes.ok) {
-                setUsers(await usersRes.json());
-            }
+            if (usersRes && usersRes.ok) setUsers(await usersRes.json());
+            if (deptsRes && deptsRes.ok) setDepartments(await deptsRes.json());
+            if (typesRes && typesRes.ok) setSubjectTypes(await typesRes.json());
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -82,10 +80,7 @@ export default function AdminPapersPage() {
         if (!confirm('Are you sure you want to delete this paper? This action cannot be undone.')) return;
 
         try {
-            const res = await fetch(`/api/papers/${paperId}`, {
-                method: 'DELETE',
-            });
-
+            const res = await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
             if (res.ok) {
                 setPapers(papers.filter(p => p.id !== paperId));
             } else {
@@ -95,6 +90,11 @@ export default function AdminPapersPage() {
             console.error('Error deleting paper:', error);
             alert('Error deleting paper');
         }
+    };
+
+    const handleEditSave = (updatedPaper: Paper) => {
+        setPapers(papers.map(p => p.id === updatedPaper.id ? updatedPaper : p));
+        setEditingPaper(null);
     };
 
     const getUserName = (userId: string) => {
@@ -235,6 +235,13 @@ export default function AdminPapersPage() {
                                                 <Download size={16} />
                                             </a>
                                             <button
+                                                onClick={() => setEditingPaper(paper)}
+                                                className={`${styles.iconButton} ${styles.edit}`}
+                                                title="Edit paper details"
+                                            >
+                                                <Pencil size={16} />
+                                            </button>
+                                            <button
                                                 onClick={() => handleDelete(paper.id)}
                                                 className={`${styles.iconButton} ${styles.delete}`}
                                                 title="Delete"
@@ -253,6 +260,17 @@ export default function AdminPapersPage() {
                     icon={<FileText size={48} />}
                     title="No Papers Found"
                     description="Try adjusting your search or filters."
+                />
+            )}
+
+            {/* Edit Modal */}
+            {editingPaper && (
+                <EditPaperModal
+                    paper={editingPaper}
+                    departments={departments}
+                    subjectTypes={subjectTypes}
+                    onClose={() => setEditingPaper(null)}
+                    onSave={handleEditSave}
                 />
             )}
         </div>

@@ -107,9 +107,9 @@ export const STORAGE_PATHS = {
 export const ROUTES = {
   HOME: '/',
   PAPERS: '/papers',
-  DEPARTMENT_SEMESTERS: (deptId: string) => `/papers/department/${deptId}`,
-  DEPARTMENT_SUBJECTS: (deptId: string, semester: number | string) => `/papers/department/${deptId}/${semester}`,
-  SUBJECT_PAPERS: (subjectId: string) => `/papers/subject/${subjectId}`,
+  DEPARTMENT_SEMESTERS: (deptSlug: string) => `/papers/department/${deptSlug}`,
+  DEPARTMENT_SUBJECTS: (deptSlug: string, semester: number | string) => `/papers/department/${deptSlug}/${semester}`,
+  SUBJECT_PAPERS: (subjectSlug: string) => `/papers/subject/${subjectSlug}`,
   ADMIN_LOGIN: '/admin/login',
   ADMIN_DASHBOARD: '/admin',
   ADMIN_TEACHERS: '/admin/teachers',

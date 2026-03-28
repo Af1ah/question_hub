@@ -18,6 +18,7 @@ declare module 'next-auth' {
     email: string;
     name: string;
     role: UserRole;
+    departmentId?: string;
   }
 
   interface Session {
@@ -26,6 +27,7 @@ declare module 'next-auth' {
       email: string;
       name: string;
       role: UserRole;
+      departmentId?: string;
     };
     accessToken?: string;
     firebaseToken?: string;
@@ -38,6 +40,7 @@ declare module 'next-auth/jwt' {
     email: string;
     name: string;
     role: UserRole;
+    departmentId?: string;
     accessToken?: string;
     firebaseToken?: string;
   }
@@ -214,6 +217,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.displayName,
           role: 'admin',
+          departmentId: user.departmentId,
         };
       },
     }),
@@ -253,6 +257,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.displayName,
           role: 'teacher',
+          departmentId: user.departmentId,
         };
       },
     }),
@@ -271,6 +276,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
+        token.departmentId = (user as any).departmentId; // Cast because NextAuth User type is restricted
         token.accessToken = generateAccessToken();
       }
 
@@ -305,6 +311,7 @@ export const authOptions: NextAuthOptions = {
           email: token.email,
           name: token.name,
           role: token.role,
+          departmentId: token.departmentId,
         };
         session.accessToken = token.accessToken;
         // Important: Assign firebaseToken to session

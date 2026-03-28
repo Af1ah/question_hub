@@ -10,12 +10,13 @@ export const revalidate = 0;
 export async function generateMetadata({ 
   params 
 }: { 
-  params: Promise<{ departmentId: string }> 
+  params: Promise<{ departmentSlug: string }> 
 }) {
   const resolvedParams = await params;
   try {
+    const slugOrId = (resolvedParams as any).departmentSlug || (resolvedParams as any).departmentId;
     const hierarchyData = await getAllDepartmentsWithHierarchy();
-    const department = hierarchyData.departments.find(d => d.id === resolvedParams.departmentId);
+    const department = hierarchyData.departmentBySlug[slugOrId] || hierarchyData.departments.find(d => d.id === slugOrId);
     
     if (!department) {
       return { title: 'Department Not Found - QnHub' };
@@ -33,12 +34,13 @@ export async function generateMetadata({
 export default async function DepartmentSemestersPage({
   params
 }: {
-  params: Promise<{ departmentId: string }>
+  params: Promise<{ departmentSlug: string }>
 }) {
   const resolvedParams = await params;
   try {
+    const slugOrId = (resolvedParams as any).departmentSlug || (resolvedParams as any).departmentId;
     const hierarchyData = await getAllDepartmentsWithHierarchy();
-    const department = hierarchyData.departments.find(d => d.id === resolvedParams.departmentId);
+    const department = hierarchyData.departmentBySlug[slugOrId] || hierarchyData.departments.find(d => d.id === slugOrId);
     
     if (!department) {
       notFound();
@@ -71,7 +73,7 @@ export default async function DepartmentSemestersPage({
             <div className={styles.grid}>
               {semesters.map((semester) => (
                 <Link 
-                  href={ROUTES.DEPARTMENT_SUBJECTS(department.id, semester.value)} 
+                  href={ROUTES.DEPARTMENT_SUBJECTS(department.slug, semester.value)} 
                   key={semester.value}
                   className={styles.card}
                 >

@@ -72,7 +72,11 @@ export async function PATCH(
       );
     }
 
-    if (session.user.role !== 'admin' && paper.uploadedBy !== session.user.id) {
+    const canEdit = session.user.role === 'admin' || 
+                    paper.uploadedBy === session.user.id || 
+                    (session.user.role === 'teacher' && paper.departmentId === session.user.departmentId);
+
+    if (!canEdit) {
        return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

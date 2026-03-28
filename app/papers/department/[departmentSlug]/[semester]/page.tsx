@@ -10,12 +10,13 @@ export const revalidate = 0;
 export async function generateMetadata({ 
   params 
 }: { 
-  params: Promise<{ departmentId: string; semester: string }> 
+  params: Promise<{ departmentSlug: string; semester: string }> 
 }) {
   const resolvedParams = await params;
   try {
+    const slugOrId = (resolvedParams as any).departmentSlug || (resolvedParams as any).departmentId;
     const hierarchyData = await getAllDepartmentsWithHierarchy();
-    const department = hierarchyData.departments.find(d => d.id === resolvedParams.departmentId);
+    const department = hierarchyData.departmentBySlug[slugOrId] || hierarchyData.departments.find(d => d.id === slugOrId);
     
     if (!department) return { title: 'Semester Subjects - QnHub' };
 
@@ -31,12 +32,13 @@ export async function generateMetadata({
 export default async function SemesterSubjectsPage({
   params
 }: {
-  params: Promise<{ departmentId: string; semester: string }>
+  params: Promise<{ departmentSlug: string; semester: string }>
 }) {
   const resolvedParams = await params;
   try {
+    const slugOrId = (resolvedParams as any).departmentSlug || (resolvedParams as any).departmentId;
     const hierarchyData = await getAllDepartmentsWithHierarchy();
-    const department = hierarchyData.departments.find(d => d.id === resolvedParams.departmentId);
+    const department = hierarchyData.departmentBySlug[slugOrId] || hierarchyData.departments.find(d => d.id === slugOrId);
     const semNumber = parseInt(resolvedParams.semester);
     
     if (!department || isNaN(semNumber)) {
@@ -55,7 +57,7 @@ export default async function SemesterSubjectsPage({
           <div className={styles.breadcrumb}>
             <Link href={ROUTES.PAPERS} className={styles.crumbLink}>Departments</Link>
             <span className={styles.separator}>/</span>
-            <Link href={ROUTES.DEPARTMENT_SEMESTERS(department.id)} className={styles.crumbLink}>
+            <Link href={ROUTES.DEPARTMENT_SEMESTERS(department.slug)} className={styles.crumbLink}>
               {department.code}
             </Link>
             <span className={styles.separator}>/</span>
@@ -78,7 +80,7 @@ export default async function SemesterSubjectsPage({
             <div className={styles.grid}>
               {subjects.map((subject) => (
                 <Link 
-                  href={ROUTES.SUBJECT_PAPERS(subject.id)} 
+                  href={ROUTES.SUBJECT_PAPERS(subject.slug)} 
                   key={subject.id}
                   className={styles.card}
                 >

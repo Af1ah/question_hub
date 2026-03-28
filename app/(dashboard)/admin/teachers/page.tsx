@@ -13,6 +13,7 @@ export default function AdminUsersPage() {
     const [loading, setLoading] = useState(true);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+    const [changingDeptId, setChangingDeptId] = useState<string | null>(null);
 
     // Filter State
     const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher'>('all');
@@ -167,6 +168,29 @@ export default function AdminUsersPage() {
         }
     };
 
+    const handleDepartmentChange = async (userId: string, departmentId: string) => {
+        setChangingDeptId(userId);
+        try {
+            const res = await fetch(`/api/users/${userId}/department`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ departmentId }),
+            });
+
+            if (res.ok) {
+                setUsers(users.map(u => u.id === userId ? { ...u, departmentId } : u));
+            } else {
+                alert('Failed to update department');
+            }
+        } catch (error) {
+            console.error('Error updating department:', error);
+            alert('Error updating department');
+        } finally {
+            setChangingDeptId(null);
+        }
+    };
+
+
     const filteredUsers = roleFilter === 'all'
         ? users
         : users.filter(u => u.role === roleFilter);
@@ -239,7 +263,22 @@ export default function AdminUsersPage() {
                                         </span>
                                     </td>
                                     <td>
-                                        {user.departmentId ? departments.find(d => d.id === user.departmentId)?.name : '-'}
+                                        <div className={styles.departmentSelectWrapper}>
+                                            <select
+                                                value={user.departmentId || ''}
+                                                onChange={(e) => handleDepartmentChange(user.id, e.target.value)}
+                                                disabled={changingDeptId === user.id}
+                                                className={styles.departmentSelect}
+                                            >
+                                                <option value="">No Department</option>
+                                                {departments.map((dept) => (
+                                                    <option key={dept.id} value={dept.id}>
+                                                        {dept.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {changingDeptId === user.id && <Loader2 size={14} className={styles.spinner} />}
+                                        </div>
                                     </td>
                                     <td>
                                         <div className={styles.actions}>

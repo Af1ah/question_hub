@@ -75,6 +75,7 @@ export interface Department {
   id: string;
   name: string;               // e.g., "Computer Science"
   code: string;               // e.g., "CSE"
+  slug: string;               // URL-friendly slug
   createdAt: Timestamp;
   createdBy: string;
 }
@@ -92,6 +93,7 @@ export interface Subject {
   id: string;
   code: string;               // Unique - e.g., "BCA3CJ201"
   name: string;               // e.g., "Computer Networks"
+  slug: string;               // URL-friendly slug
   departmentId: string;       // Reference to department
   createdAt: Timestamp;
   createdBy: string;

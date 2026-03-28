@@ -52,7 +52,7 @@ export default async function PapersPage() {
             <div className={styles.grid}>
               {departments.map((dept) => (
                 <Link 
-                  href={ROUTES.DEPARTMENT_SEMESTERS(dept.id)} 
+                  href={ROUTES.DEPARTMENT_SEMESTERS(dept.slug)} 
                   key={dept.id}
                   className={styles.card}
                 >

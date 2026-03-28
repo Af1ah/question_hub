@@ -10,27 +10,13 @@ export const revalidate = 0;
 export async function generateMetadata({ 
   params 
 }: { 
-  params: Promise<{ subjectId: string }> 
+  params: Promise<{ subjectSlug: string }> 
 }) {
   const resolvedParams = await params;
   try {
+    const slugOrId = (resolvedParams as any).subjectSlug || (resolvedParams as any).subjectId;
     const hierarchyData = await getAllDepartmentsWithHierarchy();
-    
-    // Find the subject from all groups
-    let subject = null;
-    let deptId = null;
-    let semNum = null;
-
-    for (const [key, subjects] of Object.entries(hierarchyData.subjectsBySemester)) {
-      const found = subjects.find(s => s.id === resolvedParams.subjectId);
-      if (found) {
-        subject = found;
-        const [dId, sNum] = key.split('-');
-        deptId = dId;
-        semNum = parseInt(sNum);
-        break;
-      }
-    }
+    const subject = hierarchyData.subjectBySlug[slugOrId] || Object.values(hierarchyData.subjectsBySemester).flat().find(s => s.id === slugOrId);
     
     if (!subject) return { title: 'Subject Papers - QnHub' };
 
@@ -46,25 +32,25 @@ export async function generateMetadata({
 export default async function SubjectPapersPage({
   params
 }: {
-  params: Promise<{ subjectId: string }>
+  params: Promise<{ subjectSlug: string }>
 }) {
   const resolvedParams = await params;
   try {
+    const slugOrId = (resolvedParams as any).subjectSlug || (resolvedParams as any).subjectId;
     const hierarchyData = await getAllDepartmentsWithHierarchy();
+    const subject = hierarchyData.subjectBySlug[slugOrId] || Object.values(hierarchyData.subjectsBySemester).flat().find(s => s.id === slugOrId);
     
-    // Find the subject and its context
-    let subject = null;
     let currDepartment = null;
     let currSemester = null;
 
-    for (const [key, subjects] of Object.entries(hierarchyData.subjectsBySemester)) {
-      const found = subjects.find(s => s.id === resolvedParams.subjectId);
-      if (found) {
-        subject = found;
-        const [dId, sNum] = key.split('-');
-        currDepartment = hierarchyData.departments.find(d => d.id === dId);
-        currSemester = parseInt(sNum);
-        break;
+    if (subject) {
+      for (const [key, subjects] of Object.entries(hierarchyData.subjectsBySemester)) {
+        if (subjects.some(s => s.id === subject.id)) {
+          const [dId, sNum] = key.split('-');
+          currDepartment = hierarchyData.departments.find(d => d.id === dId);
+          currSemester = parseInt(sNum);
+          break;
+        }
       }
     }
     
@@ -92,13 +78,13 @@ export default async function SubjectPapersPage({
             {currDepartment && (
               <>
                 <span className={styles.separator}>/</span>
-                <Link href={ROUTES.DEPARTMENT_SEMESTERS(currDepartment.id)} className={styles.crumbLink}>
+                <Link href={ROUTES.DEPARTMENT_SEMESTERS(currDepartment.slug)} className={styles.crumbLink}>
                   {currDepartment.code}
                 </Link>
                 {currSemester && (
                   <>
                     <span className={styles.separator}>/</span>
-                    <Link href={ROUTES.DEPARTMENT_SUBJECTS(currDepartment.id, currSemester)} className={styles.crumbLink}>
+                    <Link href={ROUTES.DEPARTMENT_SUBJECTS(currDepartment.slug, currSemester)} className={styles.crumbLink}>
                       Sem {currSemester}
                     </Link>
                   </>

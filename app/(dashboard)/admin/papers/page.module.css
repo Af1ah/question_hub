@@ -347,3 +347,9 @@
     color: var(--color-error);
     background-color: rgba(var(--color-error-rgb), 0.05);
 }
+
+.iconButton.edit:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background-color: rgba(var(--color-primary-rgb), 0.05);
+}
