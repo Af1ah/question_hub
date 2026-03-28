@@ -22,7 +22,29 @@ const novaRound = Nova_Round({
 export const metadata: Metadata = {
   ...baseMetadata,
   title: 'QnHub - Your Question Paper Bank',
-  description: 'Access and download question papers for all your academic needs. Browse by subject, semester, or department.',
+  description: 'Access and download question papers for all your academic needs. Search and browse by subject, semester, or department.',
+  keywords: [
+    'question papers',
+    'previous year papers',
+    'exam papers',
+    'question bank',
+    'academic resources',
+    'university papers',
+    'study materials',
+    'exam preparation'
+  ],
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    siteName: 'QnHub',
+    title: 'QnHub - Your Question Paper Bank',
+    description: 'Access and download question papers for all your academic needs. Search and browse by subject, semester, or department.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'QnHub - Your Question Paper Bank',
+    description: 'Access and download question papers for all your academic needs. Search and browse by subject, semester, or department.',
+  }
 };
 
 export default function RootLayout({

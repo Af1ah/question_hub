@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { Download, Eye, Calendar, BookOpen, Tag } from 'lucide-react';
 import { Paper } from '@/types';
-import { ROUTES } from '@/constants';
 import styles from './PaperCard.module.css';
 
 interface PaperCardProps {
@@ -16,7 +14,7 @@ export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
     if (variant === 'compact') {
         return (
             <article className={styles.compactCard}>
-                <Link href={ROUTES.PAPER_DETAIL(paper.seoSlug)} className={styles.compactCardLink}>
+                <a href={previewUrl} target="_blank" rel="noopener noreferrer" className={styles.compactCardLink}>
                     <div className={styles.compactContent}>
                         <h3 className={styles.compactTitle}>{paper.subjectName}</h3>
                         <div className={styles.compactMeta}>
@@ -34,7 +32,7 @@ export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
                             </span>
                         </div>
                     </div>
-                </Link>
+                </a>
                 <div className={styles.compactActions}>
                     <a
                         href={previewUrl}
@@ -60,7 +58,7 @@ export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
 
     return (
         <article className={styles.card}>
-            <Link href={ROUTES.PAPER_DETAIL(paper.seoSlug)} className={styles.cardLink}>
+            <a href={previewUrl} target="_blank" rel="noopener noreferrer" className={styles.cardLink}>
                 {/* Header */}
                 <div className={styles.header}>
                     <div className={styles.badge}>{paper.programType}</div>
@@ -72,7 +70,7 @@ export function PaperCard({ paper, variant = 'default' }: PaperCardProps) {
                     <h3 className={styles.title}>{paper.subjectName}</h3>
                     <p className={styles.code}>{paper.subjectCode}</p>
                 </div>
-            </Link>
+            </a>
 
             {/* Actions */}
             <div className={styles.actions}>

@@ -12,29 +12,46 @@ interface HomeSearchProps {
     departments: Department[];
     subjectTypes: SubjectType[];
     availableYears?: number[];
+    onSearch?: (query: string) => void;
+    onApplyFilters?: (filters: PaperFilters) => void;
+    currentFilters?: PaperFilters;
 }
 
-export function HomeSearch({ departments, subjectTypes, availableYears }: HomeSearchProps) {
-    const [filters, setFilters] = useState<PaperFilters>({});
+export function HomeSearch({
+    departments,
+    subjectTypes,
+    availableYears,
+    onSearch,
+    onApplyFilters,
+    currentFilters
+}: HomeSearchProps) {
+    const [filters, setFilters] = useState<PaperFilters>(currentFilters || {});
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const handleSearch = (query: string) => {
         setFilters((prev) => ({ ...prev, search: query }));
-        if (query) {
+        if (onSearch) {
+            onSearch(query);
+        } else if (query) {
             window.location.href = `${ROUTES.PAPERS}?search=${encodeURIComponent(query)}`;
         }
     };
 
     const handleApplyFilters = (newFilters: PaperFilters) => {
-        const params = new URLSearchParams();
+        setFilters(newFilters);
+        if (onApplyFilters) {
+            onApplyFilters(newFilters);
+        } else {
+            const params = new URLSearchParams();
 
-        Object.entries(newFilters).forEach(([key, value]) => {
-            if (value !== undefined && value !== '') {
-                params.set(key, String(value));
-            }
-        });
+            Object.entries(newFilters).forEach(([key, value]) => {
+                if (value !== undefined && value !== '') {
+                    params.set(key, String(value));
+                }
+            });
 
-        window.location.href = `${ROUTES.PAPERS}?${params.toString()}`;
+            window.location.href = `${ROUTES.PAPERS}?${params.toString()}`;
+        }
     };
 
     return (

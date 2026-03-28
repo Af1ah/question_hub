@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { HomeSearch } from './HomeSearch';
-import { Department, SubjectType } from '@/types';
+import { Department, SubjectType, PaperFilters } from '@/types';
 import { SITE_NAME } from '@/constants';
 import styles from './HeroSection.module.css';
 
@@ -8,9 +8,19 @@ interface HeroSectionProps {
     departments: Department[];
     subjectTypes: SubjectType[];
     availableYears?: number[];
+    onSearch?: (query: string) => void;
+    onApplyFilters?: (filters: PaperFilters) => void;
+    currentFilters?: PaperFilters;
 }
 
-export function HeroSection({ departments, subjectTypes, availableYears }: HeroSectionProps) {
+export function HeroSection({
+    departments,
+    subjectTypes,
+    availableYears,
+    onSearch,
+    onApplyFilters,
+    currentFilters
+ }: HeroSectionProps) {
     return (
         <section className={styles.hero}>
             {/* Background Image */}
@@ -36,7 +46,14 @@ export function HeroSection({ departments, subjectTypes, availableYears }: HeroS
                     Browse and download previous year papers instantly.
                 </p>
 
-                <HomeSearch departments={departments} subjectTypes={subjectTypes} availableYears={availableYears} />
+                <HomeSearch
+                    departments={departments}
+                    subjectTypes={subjectTypes}
+                    availableYears={availableYears}
+                    onSearch={onSearch}
+                    onApplyFilters={onApplyFilters}
+                    currentFilters={currentFilters}
+                />
             </div>
         </section>
     );

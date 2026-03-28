@@ -1,237 +1,86 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { SlidersHorizontal } from 'lucide-react';
-import { SearchBar } from '@/components/ui/SearchBar';
-import { FilterModal } from '@/components/ui/FilterModal';
-import { PaperCard } from '@/components/ui/PaperCard';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Paper, PaperFilters, Department, SubjectType } from '@/types';
+import Link from 'next/link';
+import { Department } from '@/types';
+import { getAllDepartmentsWithHierarchy } from '@/lib/hierarchy';
+import { ROUTES } from '@/constants';
 import styles from './page.module.css';
 
-function PapersContent() {
-    const searchParams = useSearchParams();
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-    const [papers, setPapers] = useState<Paper[]>([]);
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
-    const [availableYears, setAvailableYears] = useState<number[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [filters, setFilters] = useState<PaperFilters>({});
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [total, setTotal] = useState(0);
-    const [hasMore, setHasMore] = useState(false);
-    const [offset, setOffset] = useState(0);
-
-    const PAGE_SIZE = 12;
-
-    // Initialize filters from URL params
-    useEffect(() => {
-        const initialFilters: PaperFilters = {
-            search: searchParams.get('search') || undefined,
-            subjectCode: searchParams.get('subjectCode') || undefined,
-            departmentId: searchParams.get('departmentId') || undefined,
-            subjectTypeId: searchParams.get('subjectTypeId') || undefined,
-            programType: searchParams.get('programType') || undefined,
-            semester: searchParams.get('semester') ? parseInt(searchParams.get('semester')!) : undefined,
-            yearOfExam: searchParams.get('yearOfExam') ? parseInt(searchParams.get('yearOfExam')!) : undefined,
-        };
-        setFilters(initialFilters);
-    }, [searchParams]);
-
-    // Fetch data when filters change (reset pagination)
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setOffset(0);
-            try {
-                // Build query string
-                const params = new URLSearchParams();
-                Object.entries(filters).forEach(([key, value]) => {
-                    if (value !== undefined && value !== '') {
-                        params.set(key, String(value));
-                    }
-                });
-                params.set('limit', String(PAGE_SIZE));
-                params.set('offset', '0');
-
-                const [papersRes, deptsRes, typesRes, yearsRes] = await Promise.all([
-                    fetch(`/api/papers?${params.toString()}`),
-                    fetch('/api/departments'),
-                    fetch('/api/subject-types'),
-                    fetch('/api/papers/years'),
-                ]);
-
-                if (papersRes.ok) {
-                    const data = await papersRes.json();
-                    setPapers(data.items || []);
-                    setTotal(data.total || 0);
-                    setHasMore(data.hasMore || false);
-                }
-                if (deptsRes.ok) setDepartments(await deptsRes.json());
-                if (typesRes.ok) setSubjectTypes(await typesRes.json());
-                if (yearsRes.ok) setAvailableYears(await yearsRes.json());
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [filters]);
-
-    const handleLoadMore = async () => {
-        setLoadingMore(true);
-        const newOffset = offset + PAGE_SIZE;
-        try {
-            const params = new URLSearchParams();
-            Object.entries(filters).forEach(([key, value]) => {
-                if (value !== undefined && value !== '') {
-                    params.set(key, String(value));
-                }
-            });
-            params.set('limit', String(PAGE_SIZE));
-            params.set('offset', String(newOffset));
-
-            const res = await fetch(`/api/papers?${params.toString()}`);
-            if (res.ok) {
-                const data = await res.json();
-                setPapers((prev) => [...prev, ...(data.items || [])]);
-                setHasMore(data.hasMore || false);
-                setOffset(newOffset);
-            }
-        } catch (error) {
-            console.error('Error loading more:', error);
-        } finally {
-            setLoadingMore(false);
-        }
+export async function generateMetadata() {
+  try {
+    const hierarchyData = await getAllDepartmentsWithHierarchy();
+    const totalDepartments = hierarchyData.departments?.length || 0;
+    
+    return {
+      title: `Browse Departments - QnHub`,
+      description: `Explore question papers from ${totalDepartments} departments. Browse and download previous year papers for your academic needs.`,
     };
-
-    const handleSearch = (query: string) => {
-        setFilters((prev) => ({ ...prev, search: query }));
+  } catch (error) {
+    return {
+      title: 'Browse Departments - QnHub',
+      description: 'Explore question papers by department, semester, and subject.',
     };
-
-    const handleApplyFilters = (newFilters: PaperFilters) => {
-        setFilters(newFilters);
-    };
-
-    const activeFiltersCount = Object.values(filters).filter(
-        (v) => v !== undefined && v !== ''
-    ).length;
-
-    return (
-        <div className={styles.page}>
-            <div className={styles.container}>
-                {/* Header */}
-                <div className={styles.header}>
-                    <div>
-                        <h1 className={styles.title}>Browse Question Papers</h1>
-                        <p className={styles.subtitle}>
-                            {total} papers found
-                            {filters.search && ` for "${filters.search}"`}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Search and Filter */}
-                <div className={styles.toolbar}>
-                    <SearchBar
-                        value={filters.search}
-                        onSearch={handleSearch}
-                        className={styles.searchBar}
-                    />
-                    <button
-                        onClick={() => setIsFilterOpen(true)}
-                        className={styles.filterButton}
-                    >
-                        <SlidersHorizontal size={18} />
-                        <span>Filters</span>
-                        {activeFiltersCount > 0 && (
-                            <span className={styles.filterBadge}>{activeFiltersCount}</span>
-                        )}
-                    </button>
-                </div>
-
-                {/* Papers List */}
-                {loading ? (
-                    <div className={styles.loadingWrapper}>
-                        <LoadingSpinner size="lg" />
-                    </div>
-                ) : papers.length > 0 ? (
-                    <>
-                        <div className={styles.papersList}>
-                            {papers.map((paper) => (
-                                <PaperCard key={paper.id} paper={paper} variant="compact" />
-                            ))}
-                        </div>
-                        {hasMore && (
-                            <div className={styles.loadMoreWrapper}>
-                                <button
-                                    onClick={handleLoadMore}
-                                    className={styles.loadMoreButton}
-                                    disabled={loadingMore}
-                                >
-                                    {loadingMore ? (
-                                        <>
-                                            <LoadingSpinner size="sm" />
-                                            <span>Loading...</span>
-                                        </>
-                                    ) : (
-                                        <span>Load More Papers</span>
-                                    )}
-                                </button>
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <EmptyState
-                        title="No Papers Found"
-                        description={
-                            filters.search
-                                ? "No papers match your search criteria. Try adjusting your filters."
-                                : "No question papers have been uploaded yet."
-                        }
-                    />
-                )}
-            </div>
-
-            {/* Filter Modal */}
-            <FilterModal
-                isOpen={isFilterOpen}
-                onClose={() => setIsFilterOpen(false)}
-                filters={filters}
-                onApply={handleApplyFilters}
-                departments={departments}
-                subjectTypes={subjectTypes}
-                availableYears={availableYears}
-            />
-        </div>
-    );
+  }
 }
 
-// Loading fallback for Suspense
-function PapersLoading() {
+export default async function PapersPage() {
+  try {
+    const hierarchyData = await getAllDepartmentsWithHierarchy();
+    
+    // Sort departments alphabetically
+    const departments = (hierarchyData.departments || []).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+
     return (
-        <div className={styles.page}>
-            <div className={styles.container}>
-                <div className={styles.loadingWrapper}>
-                    <LoadingSpinner size="lg" />
-                </div>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <header className={styles.header}>
+            <h1 className={styles.title}>Browse Question Papers</h1>
+            <p className={styles.subtitle}>
+              Select a department to view available semesters and subjects
+            </p>
+          </header>
+
+          {!departments || departments.length === 0 ? (
+            <div className={styles.emptyState}>
+              <h2>No Departments Found</h2>
+              <p>No departments have been added yet. Please check back later.</p>
             </div>
+          ) : (
+            <div className={styles.grid}>
+              {departments.map((dept) => (
+                <Link 
+                  href={ROUTES.DEPARTMENT_SEMESTERS(dept.id)} 
+                  key={dept.id}
+                  className={styles.card}
+                >
+                  <div className={styles.cardHeader}>
+                    <h2 className={styles.cardTitle}>{dept.name}</h2>
+                    <span className={styles.badge}>{dept.code}</span>
+                  </div>
+                  <div className={styles.cardFooter}>
+                    <span className={styles.linkText}>View Semesters &rarr;</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
     );
-}
-
-import { Suspense } from 'react';
-
-export default function PapersPage() {
+  } catch (error) {
+    console.error('Error loading papers hierarchy:', error);
     return (
-        <Suspense fallback={<PapersLoading />}>
-            <PapersContent />
-        </Suspense>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.errorState}>
+            <h2>Error Loading Data</h2>
+            <p>Unable to load departments at the moment. Please try again later.</p>
+          </div>
+        </div>
+      </div>
     );
+  }
 }

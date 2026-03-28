@@ -1,5 +1,4 @@
-import { HeroSection } from '@/components/home/HeroSection';
-import { RecentPapers } from '@/components/home/RecentPapers';
+import { HomeClient } from '@/components/home/HomeClient';
 import { Paper, Department, SubjectType } from '@/types';
 import styles from './page.module.css';
 
@@ -49,8 +48,12 @@ export default async function HomePage() {
 
   return (
     <div className={styles.page}>
-      <HeroSection departments={departments} subjectTypes={subjectTypes} availableYears={availableYears} />
-      <RecentPapers papers={papers} />
+      <HomeClient
+        initialPapers={papers}
+        departments={departments}
+        subjectTypes={subjectTypes}
+        availableYears={availableYears}
+      />
     </div>
   );
 }
