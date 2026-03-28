@@ -23,8 +23,8 @@ export async function generateMetadata({
     }
 
     return {
-      title: `${department.name} Semesters - QnHub`,
-      description: `Explore question papers for ${department.name} by selecting a semester.`,
+      title: `${department.name} Previous Year Question Papers - Calicut University | QnHub`,
+      description: `Download ${department.name} (${department.code}) previous year question papers and study materials for Calicut University. Select a semester to view available subjects.`,
     };
   } catch (error) {
     return { title: 'QnHub' };
@@ -48,8 +48,37 @@ export default async function DepartmentSemestersPage({
 
     const semesters = hierarchyData.semesters[department.id] || [];
 
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": ROUTES.HOME
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Departments",
+          "item": ROUTES.PAPERS
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": department.name,
+          "item": ROUTES.DEPARTMENT_SEMESTERS(department.slug)
+        }
+      ]
+    };
+
     return (
       <div className={styles.page}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <div className={styles.container}>
           <div className={styles.breadcrumb}>
             <Link href={ROUTES.PAPERS} className={styles.backLink}>

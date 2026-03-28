@@ -62,11 +62,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${baseUrl}/papers/${data.seoSlug || doc.id}`,
         lastModified: data.updatedAt?.toDate?.() || new Date(),
         changeFrequency: 'weekly' as const,
-        priority: 0.7,
+        priority: 0.6,
       };
     });
 
-    return [...staticPages, ...paperPages];
+    // Add Department Links
+    const { departments, subjectsBySemester } = await import('@/lib/hierarchy').then(m => m.getAllDepartmentsWithHierarchy());
+    
+    const departmentPages: MetadataRoute.Sitemap = departments.map((dept) => ({
+      url: `${baseUrl}/papers/department/${dept.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    }));
+
+    // Add Subject Links
+    const subjectPages: MetadataRoute.Sitemap = Object.values(subjectsBySemester)
+      .flat()
+      .map((subject) => ({
+        url: `${baseUrl}/papers/subject/${subject.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }));
+
+    return [...staticPages, ...departmentPages, ...subjectPages, ...paperPages];
   } catch (error) {
     console.error('Error generating sitemap:', error);
     return staticPages;

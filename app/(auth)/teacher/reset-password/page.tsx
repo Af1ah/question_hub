@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { SITE_NAME } from '@/constants';
 import styles from './page.module.css';
 
-export default function TeacherResetPasswordPage() {
+function ResetPasswordForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
@@ -184,5 +184,13 @@ export default function TeacherResetPasswordPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function TeacherResetPasswordPage() {
+    return (
+        <Suspense fallback={<div style={{ textAlign: 'center', marginTop: '2rem' }}>Loading...</div>}>
+            <ResetPasswordForm />
+        </Suspense>
     );
 }

@@ -20,9 +20,13 @@ export async function generateMetadata({
     
     if (!subject) return { title: 'Subject Papers - QnHub' };
 
+    const papers = hierarchyData.papersBySubject[subject.id] || [];
+    const years = Array.from(new Set(papers.map(p => p.yearOfExam))).sort((a, b) => b - a);
+    const yearsStr = years.length > 0 ? ` (${years.join(', ')})` : '';
+
     return {
-      title: `${subject.name} Previous Year Papers | QnHub`,
-      description: `Download previous year question papers for ${subject.name} (${subject.code}).`,
+      title: `${subject.name}${yearsStr} Previous Year Papers - Calicut University | QnHub`,
+      description: `Download previous year question papers for ${subject.name} (${subject.code}) from Calicut University. Available years: ${years.length > 0 ? years.join(', ') : 'N/A'}.`,
     };
   } catch (error) {
     return { title: 'QnHub' };
@@ -70,8 +74,39 @@ export default async function SubjectPapersPage({
 
     const years = Object.keys(papersByYear).map(Number).sort((a, b) => b - a);
 
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": ROUTES.HOME },
+        { "@type": "ListItem", "position": 2, "name": "Departments", "item": ROUTES.PAPERS },
+        ...(currDepartment ? [{
+          "@type": "ListItem",
+          "position": 3,
+          "name": currDepartment.name,
+          "item": ROUTES.DEPARTMENT_SEMESTERS(currDepartment.slug)
+        }] : []),
+        ...(currDepartment && currSemester ? [{
+          "@type": "ListItem",
+          "position": 4,
+          "name": `Semester ${currSemester}`,
+          "item": ROUTES.DEPARTMENT_SUBJECTS(currDepartment.slug, currSemester)
+        }] : []),
+        {
+          "@type": "ListItem",
+          "position": currDepartment && currSemester ? 5 : (currDepartment ? 4 : 3),
+          "name": subject.name,
+          "item": ROUTES.SUBJECT_PAPERS(subject.slug)
+        }
+      ]
+    };
+
     return (
       <div className={styles.page}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <div className={styles.container}>
           <div className={styles.breadcrumb}>
             <Link href={ROUTES.PAPERS} className={styles.crumbLink}>Departments</Link>
